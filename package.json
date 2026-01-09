@@ -1,5 +1,5 @@
 {
-  "name": "excalidraw-cli",
+  "name": "@swiftlysingh/excalidraw-cli",
   "version": "1.0.0",
   "description": "CLI for creating Excalidraw flowcharts programmatically",
   "type": "module",
