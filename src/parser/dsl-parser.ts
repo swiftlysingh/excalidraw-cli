@@ -126,10 +126,10 @@ function tokenize(input: string): Token[] {
         directive += input[i];
         i++;
       }
-      // Get directive value
+      // Get directive value (stop at newline, comment, or another @)
       while (i < len && (input[i] === ' ' || input[i] === '\t')) i++;
       let value = '';
-      while (i < len && input[i] !== '\n' && input[i] !== '#') {
+      while (i < len && input[i] !== '\n' && input[i] !== '#' && input[i] !== '@') {
         value += input[i];
         i++;
       }
