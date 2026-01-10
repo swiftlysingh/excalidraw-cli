@@ -31,6 +31,11 @@ import type {
 import { DEFAULT_LAYOUT_OPTIONS } from '../types/dsl.js';
 
 /**
+ * Map of DOT node IDs to their explicit NodeModel (if declared explicitly)
+ */
+type ExplicitNodeMap = Map<string, NodeModel>;
+
+/**
  * Map DOT shape names to our NodeType
  */
 function mapDotShape(dotShape: string | undefined): NodeType {
@@ -132,12 +137,12 @@ function extractEdgeStyle(edge: EdgeModel): EdgeStyle | undefined {
 }
 
 /**
- * Get the node ID from an edge target (handles NodeModel and ForwardRefNode)
+ * Get the node ID from an edge target (handles NodeModel and ForwardRefNode/plain objects)
  */
 function getNodeIdFromTarget(target: unknown): string | null {
   if (!target) return null;
 
-  // Handle NodeModel
+  // Handle NodeModel or ForwardRefNode (both have id property)
   if (typeof target === 'object' && 'id' in target && typeof (target as { id: unknown }).id === 'string') {
     return (target as { id: string }).id;
   }
@@ -146,31 +151,47 @@ function getNodeIdFromTarget(target: unknown): string | null {
 }
 
 /**
- * Recursively collect all nodes from a graph and its subgraphs
+ * Recursively collect all explicit nodes from a graph and its subgraphs
  */
-function collectNodes(
+function collectExplicitNodes(
   graph: RootGraphModel | SubgraphModel,
-  nodeMap: Map<string, GraphNode>
+  explicitNodes: ExplicitNodeMap
 ): void {
-  // Process nodes in this graph
+  // Process explicit nodes in this graph
   for (const node of graph.nodes) {
-    if (nodeMap.has(node.id)) continue;
-
-    const label = node.attributes.get('label');
-    const shape = node.attributes.get('shape');
-    const nodeStyle = extractNodeStyle(node);
-
-    nodeMap.set(node.id, {
-      id: nanoid(10),
-      type: mapDotShape(typeof shape === 'string' ? shape : undefined),
-      label: typeof label === 'string' ? label : node.id,
-      style: nodeStyle,
-    });
+    if (!explicitNodes.has(node.id)) {
+      explicitNodes.set(node.id, node);
+    }
   }
 
   // Recursively process subgraphs
   for (const subgraph of graph.subgraphs) {
-    collectNodes(subgraph, nodeMap);
+    collectExplicitNodes(subgraph, explicitNodes);
+  }
+}
+
+/**
+ * Recursively collect all node IDs referenced in edges
+ */
+function collectNodeIdsFromEdges(
+  graph: RootGraphModel | SubgraphModel,
+  nodeIds: Set<string>
+): void {
+  for (const edge of graph.edges) {
+    const targets = edge.targets;
+    if (!targets) continue;
+
+    for (const target of targets) {
+      const id = getNodeIdFromTarget(target);
+      if (id) {
+        nodeIds.add(id);
+      }
+    }
+  }
+
+  // Recursively process subgraphs
+  for (const subgraph of graph.subgraphs) {
+    collectNodeIdsFromEdges(subgraph, nodeIds);
   }
 }
 
@@ -233,30 +254,66 @@ export function parseDOT(input: string): FlowchartGraph {
 
   const options: LayoutOptions = { ...DEFAULT_LAYOUT_OPTIONS };
 
-  // Extract graph-level attributes
-  const rankdir = rootGraph.attributes.graph.get('rankdir');
+  // Extract graph-level attributes using get() on the root graph
+  const rankdir = rootGraph.get('rankdir');
   const direction = mapRankDir(typeof rankdir === 'string' ? rankdir : undefined);
   if (direction) {
     options.direction = direction;
   }
 
-  const nodesep = rootGraph.attributes.graph.get('nodesep');
+  const nodesep = rootGraph.get('nodesep');
   if (typeof nodesep === 'number') {
     // nodesep is in inches, convert to approximate pixels (72 dpi)
     options.nodeSpacing = Math.round(nodesep * 72);
   }
 
-  const ranksep = rootGraph.attributes.graph.get('ranksep');
+  const ranksep = rootGraph.get('ranksep');
   if (typeof ranksep === 'number') {
     // ranksep is in inches, convert to approximate pixels (72 dpi)
     options.rankSpacing = Math.round(ranksep * 72);
   }
 
-  // Collect all nodes (including from subgraphs)
-  const nodeMap = new Map<string, GraphNode>();
-  collectNodes(rootGraph, nodeMap);
+  // Step 1: Collect all explicit nodes (declared with attributes)
+  const explicitNodes: ExplicitNodeMap = new Map();
+  collectExplicitNodes(rootGraph, explicitNodes);
 
-  // Collect all edges (including from subgraphs)
+  // Step 2: Collect all node IDs referenced in edges (including implicit nodes)
+  const allNodeIds = new Set<string>();
+  collectNodeIdsFromEdges(rootGraph, allNodeIds);
+
+  // Also add explicit node IDs
+  for (const nodeId of explicitNodes.keys()) {
+    allNodeIds.add(nodeId);
+  }
+
+  // Step 3: Build the node map (merging explicit attributes with implicit nodes)
+  const nodeMap = new Map<string, GraphNode>();
+  for (const nodeId of allNodeIds) {
+    const explicitNode = explicitNodes.get(nodeId);
+
+    if (explicitNode) {
+      // Node was explicitly declared - use its attributes
+      const label = explicitNode.attributes.get('label');
+      const shape = explicitNode.attributes.get('shape');
+      const nodeStyle = extractNodeStyle(explicitNode);
+
+      nodeMap.set(nodeId, {
+        id: nanoid(10),
+        type: mapDotShape(typeof shape === 'string' ? shape : undefined),
+        label: typeof label === 'string' ? label : nodeId,
+        style: nodeStyle,
+      });
+    } else {
+      // Implicit node (only referenced in edges) - use defaults
+      nodeMap.set(nodeId, {
+        id: nanoid(10),
+        type: 'rectangle',
+        label: nodeId,
+      });
+    }
+  }
+
+  // Step 4: Collect all edges
   const edges: GraphEdge[] = [];
   collectEdges(rootGraph, nodeMap, edges);
 
@@ -266,4 +323,3 @@ export function parseDOT(input: string): FlowchartGraph {
     options,
   };
 }
-
