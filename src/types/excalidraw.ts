@@ -10,7 +10,8 @@ export type ExcalidrawElementType =
   | 'text'
   | 'arrow'
   | 'line'
-  | 'freedraw';
+  | 'freedraw'
+  | 'image';
 
 export type ExcalidrawFillStyle = 'solid' | 'hachure' | 'cross-hatch';
 
@@ -143,6 +144,16 @@ export interface ExcalidrawLine extends ExcalidrawElementBase {
 }
 
 /**
+ * Image element
+ */
+export interface ExcalidrawImage extends ExcalidrawElementBase {
+  type: 'image';
+  fileId: string;
+  status: 'pending' | 'saved' | 'error';
+  scale: [number, number];
+}
+
+/**
  * Union type for all Excalidraw elements
  */
 export type ExcalidrawElement =
@@ -151,7 +162,19 @@ export type ExcalidrawElement =
   | ExcalidrawEllipse
   | ExcalidrawText
   | ExcalidrawArrow
-  | ExcalidrawLine;
+  | ExcalidrawLine
+  | ExcalidrawImage;
+
+/**
+ * File data for embedded images
+ */
+export interface ExcalidrawFileData {
+  mimeType: string;
+  id: string;
+  dataURL: string; // data:image/...;base64,... or URL
+  created: number;
+  lastRetrieved?: number;
+}
 
 /**
  * Application state for the canvas
@@ -173,7 +196,7 @@ export interface ExcalidrawFile {
   source: string;
   elements: ExcalidrawElement[];
   appState: ExcalidrawAppState;
-  files: Record<string, unknown>;
+  files: Record<string, ExcalidrawFileData>;
 }
 
 /**
