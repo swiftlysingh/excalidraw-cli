@@ -1,6 +1,6 @@
 {
   "name": "@swiftlysingh/excalidraw-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI for creating Excalidraw flowcharts programmatically",
   "type": "module",
   "main": "dist/index.js",
@@ -39,7 +39,8 @@
   "dependencies": {
     "commander": "^12.1.0",
     "elkjs": "^0.9.3",
-    "nanoid": "^5.0.9"
+    "nanoid": "^5.0.9",
+    "ts-graphviz": "^3.0.6"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
