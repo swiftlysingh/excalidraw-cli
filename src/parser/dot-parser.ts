@@ -77,6 +77,17 @@ function mapRankDir(rankdir: string | undefined): FlowDirection | undefined {
 }
 
 /**
+ * Check if a DOT style attribute contains a specific style value.
+ * DOT style attributes can be comma-separated (e.g., "filled,dashed").
+ * This function splits by comma and checks for exact matches to avoid
+ * false positives like "dashedline" matching "dashed".
+ */
+function hasStyleValue(styleAttr: string, value: string): boolean {
+  const styles = styleAttr.split(',').map((s) => s.trim().toLowerCase());
+  return styles.includes(value.toLowerCase());
+}
+
+/**
  * Extract node style from DOT attributes
  */
 function extractNodeStyle(node: NodeModel): NodeStyle | undefined {
@@ -97,10 +108,10 @@ function extractNodeStyle(node: NodeModel): NodeStyle | undefined {
 
   const styleAttr = node.attributes.get('style');
   if (styleAttr && typeof styleAttr === 'string') {
-    if (styleAttr.includes('dashed')) {
+    if (hasStyleValue(styleAttr, 'dashed')) {
       style.strokeStyle = 'dashed';
       hasStyle = true;
-    } else if (styleAttr.includes('dotted')) {
+    } else if (hasStyleValue(styleAttr, 'dotted')) {
       style.strokeStyle = 'dotted';
       hasStyle = true;
     }
@@ -124,10 +135,10 @@ function extractEdgeStyle(edge: EdgeModel): EdgeStyle | undefined {
 
   const styleAttr = edge.attributes.get('style');
   if (styleAttr && typeof styleAttr === 'string') {
-    if (styleAttr.includes('dashed')) {
+    if (hasStyleValue(styleAttr, 'dashed')) {
       style.strokeStyle = 'dashed';
       hasStyle = true;
-    } else if (styleAttr.includes('dotted')) {
+    } else if (hasStyleValue(styleAttr, 'dotted')) {
       style.strokeStyle = 'dotted';
       hasStyle = true;
     }

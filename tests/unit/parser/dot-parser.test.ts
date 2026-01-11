@@ -33,7 +33,7 @@ describe('DOT Parser', () => {
     });
 
     it('should parse circle nodes as ellipse', () => {
-      // Note: 'Node' is a reserved word in DOT, so we use 'MyNode'
+      // Note: 'node' (case-insensitive) is a DOT keyword for setting default node attributes
       const result = parseDOT('digraph { MyNode [shape=circle]; }');
       expect(result.nodes[0].type).toBe('ellipse');
     });
@@ -294,8 +294,10 @@ describe('DOT Parser', () => {
 
     it('should parse strict digraph', () => {
       const result = parseDOT('strict digraph { A -> B; A -> B; }');
-      // In strict mode, duplicate edges are merged
       expect(result.nodes).toHaveLength(2);
+      // In strict mode, duplicate edges should be merged by ts-graphviz
+      // The edge count depends on how ts-graphviz handles strict mode
+      expect(result.edges.length).toBeGreaterThanOrEqual(1);
     });
   });
 });
