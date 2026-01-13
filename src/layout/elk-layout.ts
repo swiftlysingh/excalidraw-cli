@@ -12,9 +12,13 @@ import type {
   LayoutedGraph,
   LayoutedNode,
   LayoutedEdge,
+  LayoutedImage,
   LayoutOptions,
   GraphNode,
+  PositionedImage,
+  DecorationAnchor,
 } from '../types/dsl.js';
+import { getImageDimensions } from '../factory/image-factory.js';
 
 // ELK types
 interface ElkNode {
@@ -49,6 +53,11 @@ interface ElkGraph {
  * Calculate node dimensions based on label and type
  */
 function calculateNodeDimensions(node: GraphNode): { width: number; height: number } {
+  // Handle image nodes specially
+  if (node.type === 'image' && node.image) {
+    return getImageDimensions(node.image.src, node.image.width, node.image.height);
+  }
+
   const lines = node.label.split('\n');
   const maxLineLength = Math.max(...lines.map((l) => l.length));
   const lineCount = lines.length;
@@ -229,11 +238,130 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
     maxY = Math.max(maxY, node.y + node.height);
   }
 
-  return {
+  const canvasWidth = maxX + graph.options.padding;
+  const canvasHeight = maxY + graph.options.padding;
+
+  // Resolve positioned images
+  const layoutedImages = resolvePositionedImages(
+    graph.images || [],
+    layoutedNodes,
+    canvasWidth,
+    canvasHeight
+  );
+
+  const result: LayoutedGraph = {
     nodes: layoutedNodes,
     edges: layoutedEdges,
     options: graph.options,
-    width: maxX + graph.options.padding,
-    height: maxY + graph.options.padding,
+    width: canvasWidth,
+    height: canvasHeight,
   };
+
+  if (layoutedImages.length > 0) result.images = layoutedImages;
+  if (graph.scatter && graph.scatter.length > 0) result.scatter = graph.scatter;
+  if (graph.library) result.library = graph.library;
+
+  return result;
+}
+
+/**
+ * Calculate position offset for decoration anchor
+ */
+function getAnchorOffset(
+  anchor: DecorationAnchor | undefined,
+  nodeWidth: number,
+  nodeHeight: number,
+  imageWidth: number,
+  imageHeight: number
+): { x: number; y: number } {
+  const margin = 5; // Small margin from node edge
+
+  switch (anchor) {
+    case 'top':
+      return { x: (nodeWidth - imageWidth) / 2, y: -imageHeight - margin };
+    case 'bottom':
+      return { x: (nodeWidth - imageWidth) / 2, y: nodeHeight + margin };
+    case 'left':
+      return { x: -imageWidth - margin, y: (nodeHeight - imageHeight) / 2 };
+    case 'right':
+      return { x: nodeWidth + margin, y: (nodeHeight - imageHeight) / 2 };
+    case 'top-left':
+      return { x: -imageWidth / 2, y: -imageHeight / 2 };
+    case 'top-right':
+      return { x: nodeWidth - imageWidth / 2, y: -imageHeight / 2 };
+    case 'bottom-left':
+      return { x: -imageWidth / 2, y: nodeHeight - imageHeight / 2 };
+    case 'bottom-right':
+      return { x: nodeWidth - imageWidth / 2, y: nodeHeight - imageHeight / 2 };
+    default:
+      // Default to top-right
+      return { x: nodeWidth - imageWidth / 2, y: -imageHeight / 2 };
+  }
+}
+
+/**
+ * Resolve positioned images to absolute coordinates
+ */
+function resolvePositionedImages(
+  images: PositionedImage[],
+  layoutedNodes: LayoutedNode[],
+  _canvasWidth: number,
+  _canvasHeight: number
+): LayoutedImage[] {
+  const result: LayoutedImage[] = [];
+  const defaultSize = 50;
+
+  // Build node lookup by label
+  const nodeByLabel = new Map<string, LayoutedNode>();
+  for (const node of layoutedNodes) {
+    nodeByLabel.set(node.label, node);
+  }
+
+  for (const image of images) {
+    const width = image.width || defaultSize;
+    const height = image.height || defaultSize;
+
+    if (image.position.type === 'absolute') {
+      result.push({
+        id: image.id,
+        src: image.src,
+        x: image.position.x,
+        y: image.position.y,
+        width,
+        height,
+      });
+    } else if (image.position.type === 'near') {
+      const node = nodeByLabel.get(image.position.nodeLabel);
+      if (node) {
+        const offset = getAnchorOffset(
+          image.position.anchor,
+          node.width,
+          node.height,
+          width,
+          height
+        );
+        result.push({
+          id: image.id,
+          src: image.src,
+          x: node.x + offset.x,
+          y: node.y + offset.y,
+          width,
+          height,
+        });
+      } else {
+        // Node not found, place at origin
+        console.warn(`Node "${image.position.nodeLabel}" not found for positioned image`);
+        result.push({
+          id: image.id,
+          src: image.src,
+          x: 0,
+          y: 0,
+          width,
+          height,
+        });
+      }
+    }
+  }
+
+  return result;
 }

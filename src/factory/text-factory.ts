@@ -8,7 +8,6 @@ import { nanoid } from 'nanoid';
 import { createBaseElement } from './element-factory.js';
 import type {
   ExcalidrawText,
-  FONT_FAMILIES,
   ExcalidrawTextAlign,
   ExcalidrawVerticalAlign,
 } from '../types/excalidraw.js';

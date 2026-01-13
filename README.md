@@ -24,6 +24,12 @@
 
 ## Installation
 
+### Using the npm
+
+```bash
+npm i @swiftlysingh/excalidraw-cli
+```
+
 ### From Source (Local Development)
 
 ```bash

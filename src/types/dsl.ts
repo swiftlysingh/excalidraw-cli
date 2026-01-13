@@ -2,7 +2,7 @@
  * Flowchart DSL Type Definitions
  */
 
-export type NodeType = 'rectangle' | 'diamond' | 'ellipse' | 'database';
+export type NodeType = 'rectangle' | 'diamond' | 'ellipse' | 'database' | 'image';
 
 export type FlowDirection = 'TB' | 'BT' | 'LR' | 'RL';
 
@@ -42,6 +42,38 @@ export interface EdgeStyle {
 }
 
 /**
+ * Image source configuration
+ */
+export interface ImageSource {
+  src: string; // File path or URL
+  width?: number; // Explicit width (optional)
+  height?: number; // Explicit height (optional)
+}
+
+/**
+ * Decoration position anchors
+ */
+export type DecorationAnchor =
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right';
+
+/**
+ * Decoration attached to a node
+ */
+export interface NodeDecoration {
+  src: string;
+  anchor: DecorationAnchor;
+  width?: number;
+  height?: number;
+}
+
+/**
  * A node in the flowchart graph
  */
 export interface GraphNode {
@@ -49,6 +81,8 @@ export interface GraphNode {
   type: NodeType;
   label: string;
   style?: NodeStyle;
+  image?: ImageSource; // For image nodes
+  decorations?: NodeDecoration[]; // Decorations attached to this node
 }
 
 /**
@@ -74,12 +108,38 @@ export interface LayoutOptions {
 }
 
 /**
+ * Positioned image (decoration placed at absolute or relative position)
+ */
+export interface PositionedImage {
+  id: string;
+  src: string;
+  position:
+    | { type: 'absolute'; x: number; y: number }
+    | { type: 'near'; nodeLabel: string; anchor?: DecorationAnchor };
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Scatter configuration for distributing images across the canvas
+ */
+export interface ScatterConfig {
+  src: string;
+  count: number;
+  width?: number;
+  height?: number;
+}
+
+/**
  * Complete flowchart graph representation
  */
 export interface FlowchartGraph {
   nodes: GraphNode[];
   edges: GraphEdge[];
   options: LayoutOptions;
+  images?: PositionedImage[]; // @image directives
+  scatter?: ScatterConfig[]; // @scatter directives
+  library?: string; // @library path
 }
 
 /**
@@ -132,6 +192,18 @@ export interface LayoutedEdge extends GraphEdge {
 }
 
 /**
+ * Layouted positioned image with resolved coordinates
+ */
+export interface LayoutedImage {
+  id: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
  * Layouted flowchart graph
  */
 export interface LayoutedGraph {
@@ -140,4 +212,7 @@ export interface LayoutedGraph {
   options: LayoutOptions;
   width: number;
   height: number;
+  images?: LayoutedImage[]; // Resolved positioned images
+  scatter?: ScatterConfig[]; // Scatter configs for post-layout generation
+  library?: string; // Library path
 }

@@ -3,13 +3,14 @@
 /**
  * Excalidraw CLI
  *
- * Create Excalidraw flowcharts from DSL or JSON input.
+ * Create Excalidraw flowcharts from DSL, JSON, or DOT input.
  */
 
 import { Command } from 'commander';
 import { readFileSync, writeFileSync } from 'fs';
 import { parseDSL } from './parser/dsl-parser.js';
 import { parseJSONString } from './parser/json-parser.js';
+import { parseDOT } from './parser/dot-parser.js';
 import { layoutGraph } from './layout/elk-layout.js';
 import { generateExcalidraw, serializeExcalidraw } from './generator/excalidraw-generator.js';
 import type { FlowchartGraph, FlowDirection } from './types/dsl.js';
@@ -18,8 +19,8 @@ const program = new Command();
 
 program
   .name('excalidraw-cli')
-  .description('Create Excalidraw flowcharts from DSL or JSON')
-  .version('1.0.0');
+  .description('Create Excalidraw flowcharts from DSL, JSON, or DOT')
+  .version('1.0.1');
 
 /**
  * Create command - main flowchart creation
@@ -27,18 +28,19 @@ program
 program
   .command('create')
   .description('Create an Excalidraw flowchart')
-  .argument('[input]', 'Input file path (DSL or JSON)')
+  .argument('[input]', 'Input file path (DSL, JSON, or DOT)')
   .option('-o, --output <file>', 'Output file path', 'flowchart.excalidraw')
-  .option('-f, --format <type>', 'Input format: dsl, json (default: dsl)', 'dsl')
-  .option('--inline <dsl>', 'Inline DSL string')
+  .option('-f, --format <type>', 'Input format: dsl, json, dot (default: dsl)', 'dsl')
+  .option('--inline <dsl>', 'Inline DSL/DOT string')
   .option('--stdin', 'Read input from stdin')
   .option('-d, --direction <dir>', 'Flow direction: TB, BT, LR, RL (default: TB)')
   .option('-s, --spacing <n>', 'Node spacing in pixels', '50')
   .option('--verbose', 'Verbose output')
-  .action(async (inputFile, options) => {
+  .action(async (inputFile, options, command) => {
     try {
       let input: string;
       let format = options.format;
+      const formatExplicitlySet = command.getOptionValueSource('format') === 'cli';
 
       // Get input from various sources
       if (options.inline) {
@@ -48,9 +50,13 @@ program
       } else if (inputFile) {
         input = readFileSync(inputFile, 'utf-8');
 
-        // Auto-detect format from file extension
-        if (inputFile.endsWith('.json')) {
-          format = 'json';
+        // Auto-detect format from file extension (only if --format not explicitly set)
+        if (!formatExplicitlySet) {
+          if (inputFile.endsWith('.json')) {
+            format = 'json';
+          } else if (inputFile.endsWith('.dot') || inputFile.endsWith('.gv')) {
+            format = 'dot';
+          }
         }
       } else {
         console.error('Error: No input provided. Use --inline, --stdin, or provide an input file.');
@@ -66,6 +72,8 @@ program
       let graph: FlowchartGraph;
       if (format === 'json') {
         graph = parseJSONString(input);
+      } else if (format === 'dot') {
+        graph = parseDOT(input);
       } else {
         graph = parseDSL(input);
       }
@@ -120,21 +128,28 @@ program
   .command('parse')
   .description('Parse and validate input without generating output')
   .argument('<input>', 'Input file path')
-  .option('-f, --format <type>', 'Input format: dsl, json (default: dsl)', 'dsl')
-  .action((inputFile, options) => {
+  .option('-f, --format <type>', 'Input format: dsl, json, dot (default: dsl)', 'dsl')
+  .action((inputFile, options, command) => {
     try {
       const input = readFileSync(inputFile, 'utf-8');
       let format = options.format;
+      const formatExplicitlySet = command.getOptionValueSource('format') === 'cli';
 
-      // Auto-detect format from file extension
-      if (inputFile.endsWith('.json')) {
-        format = 'json';
+      // Auto-detect format from file extension (only if --format not explicitly set)
+      if (!formatExplicitlySet) {
+        if (inputFile.endsWith('.json')) {
+          format = 'json';
+        } else if (inputFile.endsWith('.dot') || inputFile.endsWith('.gv')) {
+          format = 'dot';
+        }
       }
 
       // Parse input
       let graph: FlowchartGraph;
       if (format === 'json') {
         graph = parseJSONString(input);
+      } else if (format === 'dot') {
+        graph = parseDOT(input);
       } else {
         graph = parseDSL(input);
       }
