@@ -32,7 +32,6 @@ import type {
   NodeType,
   PositionedImage,
   ScatterConfig,
-  NodeDecoration,
   DecorationAnchor,
   ImageSource,
 } from '../types/dsl.js';

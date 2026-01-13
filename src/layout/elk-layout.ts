@@ -305,8 +305,8 @@ function getAnchorOffset(
 function resolvePositionedImages(
   images: PositionedImage[],
   layoutedNodes: LayoutedNode[],
-  canvasWidth: number,
-  canvasHeight: number
+  _canvasWidth: number,
+  _canvasHeight: number
 ): LayoutedImage[] {
   const result: LayoutedImage[] = [];
   const defaultSize = 50;

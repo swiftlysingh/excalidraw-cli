@@ -27,10 +27,8 @@ import { DEFAULT_APP_STATE } from '../types/excalidraw.js';
 import type {
   LayoutedGraph,
   LayoutedNode,
-  LayoutedEdge,
   LayoutedImage,
   ScatterConfig,
-  NodeDecoration,
   DecorationAnchor,
 } from '../types/dsl.js';
 
@@ -227,7 +225,7 @@ export function generateExcalidraw(graph: LayoutedGraph): ExcalidrawFile {
         edge.id
       );
       // Override the text element ID to match what we bound
-      (textElement as any).id = `text-${edge.id}`;
+      (textElement as { id: string }).id = `text-${edge.id}`;
       elements.push(textElement);
     }
   }
