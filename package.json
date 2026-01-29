@@ -8,6 +8,9 @@
   "bin": {
     "excalidraw-cli": "dist/cli.js"
   },
+  "man": [
+    "man/excalidraw-cli.1"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -31,7 +34,8 @@
     "url": "https://github.com/swiftlysingh/excalidraw-cli.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "man"
   ],
   "engines": {
     "node": ">=18.0.0"
