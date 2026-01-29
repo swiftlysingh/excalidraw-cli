@@ -1,0 +1,140 @@
+.TH EXCALIDRAW-CLI 1 "January 2026" "excalidraw-cli" "User Commands"
+.SH NAME
+excalidraw-cli \- create Excalidraw flowcharts from DSL, JSON, or DOT
+.SH SYNOPSIS
+.B excalidraw-cli
+.BR create " [input] [options]"
+.br
+.B excalidraw-cli
+.BR parse " <input> [options]"
+.br
+.B excalidraw-cli
+.BR --help
+.br
+.B excalidraw-cli
+.BR --version
+.SH DESCRIPTION
+excalidraw-cli generates .excalidraw flowcharts from a text DSL, JSON, or
+Graphviz DOT. It can read inline strings, stdin, or files, then lays out the
+graph and writes the result to a file or stdout.
+.SH COMMANDS
+.TP
+.B create
+Create an Excalidraw flowchart from DSL, JSON, or DOT input.
+.TP
+.B parse
+Parse and validate input without generating output.
+.SH OPTIONS
+.SS "Global options"
+.TP
+.BR -h ", " --help
+Show help and exit.
+.TP
+.BR -V ", " --version
+Show version and exit.
+.SS "create options"
+.TP
+.BR -o ", " --output " " <file>
+Output file path (default: flowchart.excalidraw). Use \- to write to stdout.
+.TP
+.BR -f ", " --format " " <type>
+Input format: dsl, json, dot (default: dsl).
+.TP
+.BR --inline " " <dsl>
+Inline DSL or DOT string.
+.TP
+.BR --stdin
+Read input from stdin.
+.TP
+.BR -d ", " --direction " " <dir>
+Flow direction: TB, BT, LR, RL.
+.TP
+.BR -s ", " --spacing " " <n>
+Node spacing in pixels.
+.TP
+.BR --verbose
+Enable verbose logging.
+.SS "parse options"
+.TP
+.BR -f ", " --format " " <type>
+Input format: dsl, json, dot (default: dsl).
+.SH "FORMAT DETECTION"
+When a file path is provided and --format is not explicitly set, the input
+format is auto-detected by extension: .json uses json, .dot or .gv uses dot,
+and all other extensions default to dsl. For --inline or --stdin, the format
+defaults to dsl unless --format is provided.
+.SH "DSL SYNTAX"
+.TP
+.B [Label]
+Rectangle (process step).
+.TP
+.B {Label}
+Diamond (decision).
+.TP
+.B (Label)
+Ellipse (start/end).
+.TP
+.B [[Label]]
+Database.
+.TP
+.B ![path] or ![path](WxH)
+Image element, optionally with width and height.
+.TP
+.B A -> B
+Connection.
+.TP
+.B A --> B
+Dashed connection.
+.TP
+.B A -> "label" -> B
+Labeled connection.
+.TP
+.B # comment
+Comments run to end of line.
+.SH DIRECTIVES
+.TP
+.B @direction TB|BT|LR|RL
+Set flow direction.
+.TP
+.B @spacing N
+Set node spacing in pixels.
+.TP
+.B @image path at X,Y
+Position an image at absolute coordinates.
+.TP
+.B @image path near (NodeLabel) [anchor]
+Position an image near a node with optional anchor.
+.TP
+.B @decorate path anchor
+Attach a decoration to the preceding node.
+.TP
+.B @sticker name [at X,Y|near (NodeLabel) [anchor]]
+Add a sticker from the current library.
+.TP
+.B @library path
+Set the sticker library path.
+.TP
+.B @scatter path count:N [width:W] [height:H]
+Scatter repeated images across the canvas.
+.SH EXAMPLES
+.TP
+.B Create from inline DSL
+excalidraw-cli create --inline "(Start) -> [Process] -> (End)" -o flow.excalidraw
+.TP
+.B Create from a file
+excalidraw-cli create flowchart.dsl -o diagram.excalidraw
+.TP
+.B Create from stdin
+echo "[A] -> [B]" | excalidraw-cli create --stdin -o diagram.excalidraw
+.TP
+.B Parse a DOT file
+excalidraw-cli parse graph.dot --format dot
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+An error occurred.
+.SH SEE ALSO
+Excalidraw: https://excalidraw.com
