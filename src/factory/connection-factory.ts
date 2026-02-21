@@ -19,14 +19,14 @@ import type { LayoutedEdge, LayoutedNode, EdgeStyle } from '../types/dsl.js';
 function mapEdgeStyle(style?: EdgeStyle): Partial<ExcalidrawArrow> {
   if (!style) return {};
 
-  return {
-    strokeColor: style.strokeColor,
-    strokeWidth: style.strokeWidth,
-    strokeStyle: style.strokeStyle,
-    roughness: style.roughness,
-    startArrowhead: style.startArrowhead ?? null,
-    endArrowhead: style.endArrowhead ?? 'arrow',
-  };
+  const result: Partial<ExcalidrawArrow> = {};
+  if (style.strokeColor !== undefined) result.strokeColor = style.strokeColor;
+  if (style.strokeWidth !== undefined) result.strokeWidth = style.strokeWidth;
+  if (style.strokeStyle !== undefined) result.strokeStyle = style.strokeStyle;
+  if (style.roughness !== undefined) result.roughness = style.roughness;
+  result.startArrowhead = style.startArrowhead ?? null;
+  result.endArrowhead = style.endArrowhead ?? 'arrow';
+  return result;
 }
 
 /**

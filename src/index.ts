@@ -52,26 +52,31 @@ export type { ExportOptions } from './exporter/index.js';
 export { DEFAULT_LAYOUT_OPTIONS } from './types/dsl.js';
 export { DEFAULT_APP_STATE, DEFAULT_ELEMENT_STYLE } from './types/excalidraw.js';
 
+import { parseDSL as _parseDSL } from './parser/dsl-parser.js';
+import { parseJSON as _parseJSON } from './parser/json-parser.js';
+import { layoutGraph as _layoutGraph } from './layout/elk-layout.js';
+import {
+  generateExcalidraw as _generateExcalidraw,
+  serializeExcalidraw as _serializeExcalidraw,
+} from './generator/excalidraw-generator.js';
+import type { FlowchartInput } from './types/dsl.js';
+
 /**
  * High-level API: Create an Excalidraw flowchart from DSL string
  */
 export async function createFlowchartFromDSL(dsl: string): Promise<string> {
-  const graph = (await import('./parser/dsl-parser.js')).parseDSL(dsl);
-  const layoutedGraph = await (await import('./layout/elk-layout.js')).layoutGraph(graph);
-  const excalidrawFile = (await import('./generator/excalidraw-generator.js')).generateExcalidraw(
-    layoutedGraph
-  );
-  return (await import('./generator/excalidraw-generator.js')).serializeExcalidraw(excalidrawFile);
+  const graph = _parseDSL(dsl);
+  const layoutedGraph = await _layoutGraph(graph);
+  const excalidrawFile = _generateExcalidraw(layoutedGraph);
+  return _serializeExcalidraw(excalidrawFile);
 }
 
 /**
  * High-level API: Create an Excalidraw flowchart from JSON input
  */
-export async function createFlowchartFromJSON(input: import('./types/dsl.js').FlowchartInput): Promise<string> {
-  const graph = (await import('./parser/json-parser.js')).parseJSON(input);
-  const layoutedGraph = await (await import('./layout/elk-layout.js')).layoutGraph(graph);
-  const excalidrawFile = (await import('./generator/excalidraw-generator.js')).generateExcalidraw(
-    layoutedGraph
-  );
-  return (await import('./generator/excalidraw-generator.js')).serializeExcalidraw(excalidrawFile);
+export async function createFlowchartFromJSON(input: FlowchartInput): Promise<string> {
+  const graph = _parseJSON(input);
+  const layoutedGraph = await _layoutGraph(graph);
+  const excalidrawFile = _generateExcalidraw(layoutedGraph);
+  return _serializeExcalidraw(excalidrawFile);
 }

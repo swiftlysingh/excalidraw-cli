@@ -184,11 +184,9 @@ export async function convertToPNG(
   // Use @resvg/resvg-js to convert SVG → PNG
   const { Resvg } = await import('@resvg/resvg-js');
 
-  // Parse the SVG to get its natural dimensions
+  // Parse the SVG to get its natural width for scaling
   const widthMatch = svgString.match(/width="([^"]+)"/);
-  const heightMatch = svgString.match(/height="([^"]+)"/);
   const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
-  const naturalHeight = heightMatch ? parseFloat(heightMatch[1]) : 600;
 
   // Sanitize scale to avoid zero, negative, non-finite, or extreme values.
   const scale =
@@ -196,7 +194,7 @@ export async function convertToPNG(
       ? opts.scale
       : 1;
   const safeScale = Math.min(Math.max(scale, 0.1), 10);
-  const scaledWidth = Math.round(naturalWidth * safeScale);
+  const scaledWidth = Math.max(1, Math.round(naturalWidth * safeScale));
 
   // Load Excalidraw font files for text rendering.
   // resvg-js does NOT parse @font-face CSS from SVG — fonts must be
