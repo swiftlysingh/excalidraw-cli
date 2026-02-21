@@ -70,12 +70,12 @@ function resolveOptions(
 ): Required<ExportOptions> {
   return {
     ...DEFAULT_EXPORT_OPTIONS,
+    ...options,
     // Use appState background color if available
     viewBackgroundColor:
       options.viewBackgroundColor ??
       file.appState?.viewBackgroundColor ??
       DEFAULT_EXPORT_OPTIONS.viewBackgroundColor,
-    ...options,
   };
 }
 
