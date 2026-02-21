@@ -38,14 +38,6 @@ program
   .option('--stdin', 'Read input from stdin')
   .option('-d, --direction <dir>', 'Flow direction: TB, BT, LR, RL (default: TB)')
   .option('-s, --spacing <n>', 'Node spacing in pixels', '50')
-  .option('-e, --export-as <format>', 'Export as image format: png or svg')
-  .option('--export-background', 'Include background in export (default: true)')
-  .option('--no-export-background', 'Exclude background from export')
-  .option('--background-color <color>', 'Background color for export (default: #ffffff)')
-  .option('--dark', 'Export with dark mode')
-  .option('--embed-scene', 'Embed scene data in exported image')
-  .option('--export-padding <n>', 'Padding around exported content in pixels', '10')
-  .option('--scale <n>', 'Scale factor for PNG export (default: 1)', '1')
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options, command) => {
     try {
@@ -126,43 +118,6 @@ program
         writeFileSync(options.output, output, 'utf-8');
         console.log(`Created: ${options.output}`);
       }
-
-      // Export as image if requested
-      if (options.exportAs) {
-        const format = options.exportAs.toLowerCase();
-        if (format !== 'png' && format !== 'svg') {
-          console.error('Error: --export-as must be "png" or "svg"');
-          process.exit(1);
-        }
-
-        const exportOpts: ExportOptions = {
-          format: format as 'png' | 'svg',
-          exportBackground: options.exportBackground !== false,
-          viewBackgroundColor: options.backgroundColor,
-          dark: options.dark || false,
-          exportEmbedScene: options.embedScene || false,
-        exportPadding: parseInt(options.exportPadding, 10),
-        scale: parseFloat(options.scale),
-        };
-
-        const imageOutput = swapExtension(
-          options.output === '-' ? 'flowchart.excalidraw' : options.output,
-          format
-        );
-
-        if (options.verbose) {
-          console.log(`Exporting as ${format.toUpperCase()}...`);
-        }
-
-        const result = await convertImage(excalidrawFile, exportOpts);
-
-        if (typeof result === 'string') {
-          writeFileSync(imageOutput, result, 'utf-8');
-        } else {
-          writeFileSync(imageOutput, result);
-        }
-        console.log(`Exported: ${imageOutput}`);
-      }
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
       process.exit(1);
@@ -237,7 +192,7 @@ program
   .option('--background-color <color>', 'Background color (default: #ffffff)')
   .option('--dark', 'Export with dark mode')
   .option('--embed-scene', 'Embed scene data in exported image')
-  .option('--export-padding <n>', 'Padding around content in pixels', '10')
+  .option('--padding <n>', 'Padding around content in pixels', '10')
   .option('--scale <n>', 'Scale factor for PNG export', '1')
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options) => {
@@ -264,7 +219,7 @@ program
         viewBackgroundColor: options.backgroundColor,
         dark: options.dark || false,
         exportEmbedScene: options.embedScene || false,
-        exportPadding: parseInt(options.exportPadding, 10),
+        padding: parseInt(options.padding, 10),
         scale: parseFloat(options.scale),
       };
 

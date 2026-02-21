@@ -98,7 +98,7 @@ describe('edge cases and error handling', () => {
         viewBackgroundColor: '#ff00ff',
         dark: true,
         exportEmbedScene: true,
-        exportPadding: 50,
+        padding: 50,
       });
 
       expect(svg).toContain('<svg');
@@ -111,7 +111,7 @@ describe('edge cases and error handling', () => {
         viewBackgroundColor: '#00ffff',
         dark: false,
         exportEmbedScene: false,
-        exportPadding: 25,
+        padding: 25,
         scale: 2,
       });
 

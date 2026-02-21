@@ -31,7 +31,7 @@ describe('DEFAULT_EXPORT_OPTIONS', () => {
   });
 
   it('should have 10px padding by default', () => {
-    expect(DEFAULT_EXPORT_OPTIONS.exportPadding).toBe(10);
+    expect(DEFAULT_EXPORT_OPTIONS.padding).toBe(10);
   });
 
   it('should have scale 1 by default', () => {
@@ -46,7 +46,7 @@ describe('DEFAULT_EXPORT_OPTIONS', () => {
       'viewBackgroundColor',
       'dark',
       'exportEmbedScene',
-      'exportPadding',
+      'padding',
       'scale',
     ];
     for (const key of keys) {
@@ -74,7 +74,7 @@ describe('ExportOptions type', () => {
       viewBackgroundColor: '#000000',
       dark: true,
       exportEmbedScene: true,
-      exportPadding: 20,
+      padding: 20,
       scale: 2,
     };
     expect(opts.format).toBe('png');
@@ -82,7 +82,7 @@ describe('ExportOptions type', () => {
     expect(opts.viewBackgroundColor).toBe('#000000');
     expect(opts.dark).toBe(true);
     expect(opts.exportEmbedScene).toBe(true);
-    expect(opts.exportPadding).toBe(20);
+    expect(opts.padding).toBe(20);
     expect(opts.scale).toBe(2);
   });
 });

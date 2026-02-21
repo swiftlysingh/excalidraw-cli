@@ -33,7 +33,7 @@ export interface ExportOptions {
   exportEmbedScene?: boolean;
 
   /** Padding around the exported content in pixels (default: 10) */
-  exportPadding?: number;
+  padding?: number;
 
   /** Scale factor for PNG export (default: 1). Higher values = higher resolution */
   scale?: number;
@@ -48,7 +48,7 @@ export const DEFAULT_EXPORT_OPTIONS: Required<ExportOptions> = {
   viewBackgroundColor: '#ffffff',
   dark: false,
   exportEmbedScene: false,
-  exportPadding: 10,
+  padding: 10,
   scale: 1,
 };
 
@@ -130,7 +130,7 @@ export async function convertToSVG(
       elements: file.elements as unknown[],
       appState: appState as Record<string, unknown>,
       files: (file.files || {}) as Record<string, unknown>,
-      exportPadding: opts.exportPadding,
+      exportPadding: opts.padding,
     });
 
     return svg.outerHTML;

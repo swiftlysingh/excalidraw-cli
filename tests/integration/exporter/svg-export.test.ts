@@ -108,8 +108,8 @@ describe('convertToSVG', () => {
       const file = createMinimalFile();
 
       // These should not throw
-      const svg0 = await convertToSVG(file, { exportPadding: 0 });
-      const svg50 = await convertToSVG(file, { exportPadding: 50 });
+      const svg0 = await convertToSVG(file, { padding: 0 });
+      const svg50 = await convertToSVG(file, { padding: 50 });
 
       expect(svg0).toContain('<svg');
       expect(svg50).toContain('<svg');
@@ -117,8 +117,8 @@ describe('convertToSVG', () => {
 
     it('should produce wider SVG with larger padding', async () => {
       const file = createMinimalFile();
-      const svgSmallPad = await convertToSVG(file, { exportPadding: 5 });
-      const svgLargePad = await convertToSVG(file, { exportPadding: 100 });
+      const svgSmallPad = await convertToSVG(file, { padding: 5 });
+      const svgLargePad = await convertToSVG(file, { padding: 100 });
 
       // Extract width values
       const widthSmall = parseFloat(svgSmallPad.match(/width="([\d.]+)"/)?.[1] || '0');
@@ -161,7 +161,7 @@ describe('convertImage with format=svg', () => {
       format: 'svg',
       exportBackground: false,
       dark: true,
-      exportPadding: 20,
+      padding: 20,
     });
 
     expect(result).toBeTypeOf('string');

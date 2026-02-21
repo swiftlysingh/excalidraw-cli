@@ -70,9 +70,6 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 ### Export to Image
 
 ```bash
-# Export while creating a flowchart
-excalidraw-cli create --inline "[A] -> [B]" -o flow.excalidraw --export-as svg
-
 # Convert an existing .excalidraw file to PNG
 excalidraw-cli convert diagram.excalidraw --format png
 
@@ -129,13 +126,6 @@ excalidraw-cli create [input] [options]
 - `--stdin` - Read from stdin
 - `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
 - `-s, --spacing <n>` - Node spacing in pixels
-- `-e, --export-as <format>` - Also export as image: `png` or `svg`
-- `--export-background / --no-export-background` - Include or exclude background (default: include)
-- `--background-color <color>` - Background color (default: #ffffff)
-- `--dark` - Export with dark mode theme
-- `--embed-scene` - Embed scene data in exported image
-- `--export-padding <n>` - Padding around content in pixels (default: 10)
-- `--scale <n>` - Scale factor for PNG export (default: 1)
 - `--verbose` - Verbose output
 
 #### `convert`
@@ -153,7 +143,7 @@ excalidraw-cli convert <input> [options]
 - `--background-color <color>` - Background color (default: #ffffff)
 - `--dark` - Export with dark mode theme
 - `--embed-scene` - Embed scene data in exported image
-- `--export-padding <n>` - Padding around content in pixels (default: 10)
+- `--padding <n>` - Padding around content in pixels (default: 10)
 - `--scale <n>` - Scale factor for PNG export (default: 1)
 - `--verbose` - Verbose output
 
@@ -226,7 +216,7 @@ import { readFileSync, writeFileSync } from 'fs';
 const file = JSON.parse(readFileSync('diagram.excalidraw', 'utf-8'));
 
 // Export to SVG
-const svg = await convertToSVG(file, { exportPadding: 20 });
+const svg = await convertToSVG(file, { padding: 20 });
 writeFileSync('diagram.svg', svg);
 
 // Export to PNG with 2x scale and dark mode
@@ -258,7 +248,7 @@ The generated `.excalidraw` files can be:
 2. Imported into Obsidian with the Excalidraw plugin
 3. Used with any tool that supports the Excalidraw format
 
-With the `--export-as` flag or `convert` command, you can also generate:
+With the `convert` command, you can also generate:
 
 - **SVG** — scalable vector graphics, ideal for embedding in docs or web pages
 - **PNG** — raster images at any scale (1×, 2×, 3×, etc.) for presentations or sharing

@@ -132,7 +132,7 @@ describe('convertToPNG', () => {
   describe('padding', () => {
     it('should produce valid PNG with zero padding', async () => {
       const file = createMinimalFile();
-      const png = await convertToPNG(file, { exportPadding: 0 });
+      const png = await convertToPNG(file, { padding: 0 });
 
       expect(Buffer.isBuffer(png)).toBe(true);
       expect(png.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
@@ -140,7 +140,7 @@ describe('convertToPNG', () => {
 
     it('should produce valid PNG with large padding', async () => {
       const file = createMinimalFile();
-      const png = await convertToPNG(file, { exportPadding: 200 });
+      const png = await convertToPNG(file, { padding: 200 });
 
       expect(Buffer.isBuffer(png)).toBe(true);
       expect(png.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
