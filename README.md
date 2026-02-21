@@ -27,6 +27,11 @@
 
 - **Node.js** `^20.19.0 || ^22.12.0 || >=24.0.0`
 
+> **Note:** This package pins `@excalidraw/utils` to a prerelease version
+> (`0.1.3-test32`) because it is the npm `latest` tag and the only version that
+> ships `exportToSvg` and bundled fonts. See [DEPENDENCIES.md](DEPENDENCIES.md)
+> for details.
+
 ## Installation
 
 ### Using npm
