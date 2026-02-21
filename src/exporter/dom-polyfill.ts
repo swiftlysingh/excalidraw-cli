@@ -189,6 +189,10 @@ export async function ensureDOMPolyfill(): Promise<void> {
     if (url.startsWith(FONT_PROXY_BASE)) {
       // Extract font filename from the URL
       const fontFile = decodeURIComponent(url.slice(FONT_PROXY_BASE.length));
+      // Prevent path traversal attacks
+      if (fontFile.includes('..') || fontFile.startsWith('/')) {
+        return new Response(null, { status: 400, statusText: 'Invalid font path' });
+      }
       const fontPath = resolve(assetsDir, fontFile);
 
       try {
