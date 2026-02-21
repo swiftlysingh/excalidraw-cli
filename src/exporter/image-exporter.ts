@@ -190,7 +190,13 @@ export async function convertToPNG(
   const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
   const naturalHeight = heightMatch ? parseFloat(heightMatch[1]) : 600;
 
-  const scaledWidth = Math.round(naturalWidth * opts.scale);
+  // Sanitize scale to avoid zero, negative, non-finite, or extreme values.
+  const scale =
+    typeof opts.scale === 'number' && Number.isFinite(opts.scale)
+      ? opts.scale
+      : 1;
+  const safeScale = Math.min(Math.max(scale, 0.1), 10);
+  const scaledWidth = Math.round(naturalWidth * safeScale);
 
   // Load Excalidraw font files for text rendering.
   // resvg-js does NOT parse @font-face CSS from SVG — fonts must be
