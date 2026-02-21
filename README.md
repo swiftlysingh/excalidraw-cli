@@ -20,6 +20,7 @@
 - **JSON API** for programmatic use
 - **Auto-layout** using ELK.js (Eclipse Layout Kernel)
 - **Multiple flow directions**: TB (top-bottom), BT, LR, RL
+- **Export to PNG & SVG** with dark mode, custom backgrounds, scale, and padding
 - **Programmable API** for integration into other tools
 
 ## Installation
@@ -60,6 +61,22 @@ excalidraw-cli create flowchart.dsl -o diagram.excalidraw
 
 # From stdin
 echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
+```
+
+### Export to Image
+
+```bash
+# Export while creating a flowchart
+excalidraw-cli create --inline "[A] -> [B]" -o flow.excalidraw --export-as svg
+
+# Export an existing .excalidraw file to PNG
+excalidraw-cli export diagram.excalidraw -F png
+
+# Export with options
+excalidraw-cli export diagram.excalidraw -F png --export-scale 2 --dark-mode
+
+# Export SVG without background
+excalidraw-cli export diagram.excalidraw -F svg --no-export-background
 ```
 
 ### DSL Syntax
@@ -108,6 +125,32 @@ excalidraw-cli create [input] [options]
 - `--stdin` - Read from stdin
 - `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
 - `-s, --spacing <n>` - Node spacing in pixels
+- `-e, --export-as <format>` - Also export as image: `png` or `svg`
+- `--export-background / --no-export-background` - Include or exclude background (default: include)
+- `--background-color <color>` - Background color (default: #ffffff)
+- `--dark-mode` - Export with dark mode theme
+- `--embed-scene` - Embed scene data in exported image
+- `--export-padding <n>` - Padding around content in pixels (default: 10)
+- `--export-scale <n>` - Scale factor for PNG export (default: 1)
+- `--verbose` - Verbose output
+
+#### `export`
+
+Export an existing `.excalidraw` file to PNG or SVG.
+
+```bash
+excalidraw-cli export <input> [options]
+```
+
+**Options:**
+- `-F, --format <format>` - **(required)** Export format: `png` or `svg`
+- `-o, --output <file>` - Output file path (default: input file with swapped extension)
+- `--export-background / --no-export-background` - Include or exclude background
+- `--background-color <color>` - Background color (default: #ffffff)
+- `--dark-mode` - Export with dark mode theme
+- `--embed-scene` - Embed scene data in exported image
+- `--export-padding <n>` - Padding around content in pixels (default: 10)
+- `--export-scale <n>` - Scale factor for PNG export (default: 1)
 - `--verbose` - Verbose output
 
 #### `parse`
@@ -147,7 +190,12 @@ excalidraw-cli create flowchart.json -o diagram.excalidraw
 ## Programmatic Usage
 
 ```typescript
-import { createFlowchartFromDSL, createFlowchartFromJSON } from 'excalidraw-cli';
+import {
+  createFlowchartFromDSL,
+  createFlowchartFromJSON,
+  exportToSVG,
+  exportToPNG,
+} from '@swiftlysingh/excalidraw-cli';
 
 // From DSL
 const dsl = '(Start) -> [Process] -> (End)';
@@ -162,6 +210,27 @@ const input = {
   edges: [{ from: 'a', to: 'b' }]
 };
 const json2 = await createFlowchartFromJSON(input);
+```
+
+### Export API
+
+```typescript
+import { exportToSVG, exportToPNG } from '@swiftlysingh/excalidraw-cli';
+import { readFileSync, writeFileSync } from 'fs';
+
+// Load an existing .excalidraw file
+const file = JSON.parse(readFileSync('diagram.excalidraw', 'utf-8'));
+
+// Export to SVG
+const svg = await exportToSVG(file, { exportPadding: 20 });
+writeFileSync('diagram.svg', svg);
+
+// Export to PNG with 2x scale and dark mode
+const png = await exportToPNG(file, {
+  exportScale: 2,
+  exportWithDarkMode: true,
+});
+writeFileSync('diagram.png', png);
 ```
 
 ## Examples
@@ -184,6 +253,11 @@ The generated `.excalidraw` files can be:
 1. Opened directly in [Excalidraw](https://excalidraw.com) (File > Open)
 2. Imported into Obsidian with the Excalidraw plugin
 3. Used with any tool that supports the Excalidraw format
+
+With the `--export-as` flag or `export` command, you can also generate:
+
+- **SVG** — scalable vector graphics, ideal for embedding in docs or web pages
+- **PNG** — raster images at any scale (1×, 2×, 3×, etc.) for presentations or sharing
 
 ## License
 

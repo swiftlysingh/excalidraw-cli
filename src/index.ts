@@ -44,6 +44,10 @@ export { generateExcalidraw, serializeExcalidraw } from './generator/excalidraw-
 // Factory exports (for advanced usage)
 export { createNode, createArrow, createText } from './factory/index.js';
 
+// Exporter exports
+export { exportToSVG, exportToPNG, exportImage, swapExtension } from './exporter/index.js';
+export type { ExportOptions } from './exporter/index.js';
+
 // Default options
 export { DEFAULT_LAYOUT_OPTIONS } from './types/dsl.js';
 export { DEFAULT_APP_STATE, DEFAULT_ELEMENT_STYLE } from './types/excalidraw.js';
