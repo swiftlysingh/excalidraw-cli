@@ -139,10 +139,10 @@ program
           format: format as 'png' | 'svg',
           exportBackground: options.exportBackground !== false,
           viewBackgroundColor: options.backgroundColor,
-          exportWithDarkMode: options.dark || false,
+          dark: options.dark || false,
           exportEmbedScene: options.embedScene || false,
         exportPadding: parseInt(options.exportPadding, 10),
-        exportScale: parseFloat(options.scale),
+        scale: parseFloat(options.scale),
         };
 
         const imageOutput = swapExtension(
@@ -262,10 +262,10 @@ program
         format: format as 'png' | 'svg',
         exportBackground: options.exportBackground !== false,
         viewBackgroundColor: options.backgroundColor,
-        exportWithDarkMode: options.dark || false,
+        dark: options.dark || false,
         exportEmbedScene: options.embedScene || false,
         exportPadding: parseInt(options.exportPadding, 10),
-        exportScale: parseFloat(options.scale),
+        scale: parseFloat(options.scale),
       };
 
       const outputPath = options.output || swapExtension(inputFile, format);

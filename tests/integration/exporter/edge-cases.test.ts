@@ -96,7 +96,7 @@ describe('edge cases and error handling', () => {
       const svg = await convertToSVG(file, {
         exportBackground: true,
         viewBackgroundColor: '#ff00ff',
-        exportWithDarkMode: true,
+        dark: true,
         exportEmbedScene: true,
         exportPadding: 50,
       });
@@ -109,10 +109,10 @@ describe('edge cases and error handling', () => {
       const png = await convertToPNG(file, {
         exportBackground: true,
         viewBackgroundColor: '#00ffff',
-        exportWithDarkMode: false,
+        dark: false,
         exportEmbedScene: false,
         exportPadding: 25,
-        exportScale: 2,
+        scale: 2,
       });
 
       expect(Buffer.isBuffer(png)).toBe(true);

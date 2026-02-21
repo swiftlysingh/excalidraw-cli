@@ -53,8 +53,8 @@ describe('convertToPNG', () => {
   describe('scale factor', () => {
     it('should produce larger PNG with higher scale', async () => {
       const file = createMinimalFile();
-      const png1x = await convertToPNG(file, { exportScale: 1 });
-      const png2x = await convertToPNG(file, { exportScale: 2 });
+      const png1x = await convertToPNG(file, { scale: 1 });
+      const png2x = await convertToPNG(file, { scale: 2 });
 
       // 2x scale should produce a larger (more bytes) PNG
       expect(png2x.length).toBeGreaterThan(png1x.length);
@@ -62,7 +62,7 @@ describe('convertToPNG', () => {
 
     it('should produce valid PNG at lower scale', async () => {
       const file = createMinimalFile();
-      const pngHalf = await convertToPNG(file, { exportScale: 0.5 });
+      const pngHalf = await convertToPNG(file, { scale: 0.5 });
 
       // 0.5x scale should still produce a valid PNG
       // (Note: at very small sizes, PNG compression overhead can make
@@ -74,7 +74,7 @@ describe('convertToPNG', () => {
 
     it('should accept fractional scales', async () => {
       const file = createMinimalFile();
-      const png = await convertToPNG(file, { exportScale: 1.5 });
+      const png = await convertToPNG(file, { scale: 1.5 });
 
       expect(Buffer.isBuffer(png)).toBe(true);
       expect(png.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
@@ -113,7 +113,7 @@ describe('convertToPNG', () => {
   describe('dark mode', () => {
     it('should produce valid PNG in dark mode', async () => {
       const file = createMinimalFile();
-      const png = await convertToPNG(file, { exportWithDarkMode: true });
+      const png = await convertToPNG(file, { dark: true });
 
       expect(Buffer.isBuffer(png)).toBe(true);
       expect(png.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
@@ -121,8 +121,8 @@ describe('convertToPNG', () => {
 
     it('should produce different output in dark vs light mode', async () => {
       const file = createMinimalFile();
-      const pngLight = await convertToPNG(file, { exportWithDarkMode: false });
-      const pngDark = await convertToPNG(file, { exportWithDarkMode: true });
+      const pngLight = await convertToPNG(file, { dark: false });
+      const pngDark = await convertToPNG(file, { dark: true });
 
       // The buffers should differ
       expect(pngDark.equals(pngLight)).toBe(false);
@@ -167,11 +167,11 @@ describe('convertImage with format=png', () => {
     const file = createMinimalFile();
     const result1x = await convertImage(file, {
       format: 'png',
-      exportScale: 1,
+      scale: 1,
     }) as Buffer;
     const result3x = await convertImage(file, {
       format: 'png',
-      exportScale: 3,
+      scale: 3,
     }) as Buffer;
 
     expect(result3x.length).toBeGreaterThan(result1x.length);

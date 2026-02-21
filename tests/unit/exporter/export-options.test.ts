@@ -23,7 +23,7 @@ describe('DEFAULT_EXPORT_OPTIONS', () => {
   });
 
   it('should have dark mode disabled by default', () => {
-    expect(DEFAULT_EXPORT_OPTIONS.exportWithDarkMode).toBe(false);
+    expect(DEFAULT_EXPORT_OPTIONS.dark).toBe(false);
   });
 
   it('should have embed scene disabled by default', () => {
@@ -35,7 +35,7 @@ describe('DEFAULT_EXPORT_OPTIONS', () => {
   });
 
   it('should have scale 1 by default', () => {
-    expect(DEFAULT_EXPORT_OPTIONS.exportScale).toBe(1);
+    expect(DEFAULT_EXPORT_OPTIONS.scale).toBe(1);
   });
 
   it('should have all required properties', () => {
@@ -44,10 +44,10 @@ describe('DEFAULT_EXPORT_OPTIONS', () => {
       'format',
       'exportBackground',
       'viewBackgroundColor',
-      'exportWithDarkMode',
+      'dark',
       'exportEmbedScene',
       'exportPadding',
-      'exportScale',
+      'scale',
     ];
     for (const key of keys) {
       expect(DEFAULT_EXPORT_OPTIONS[key]).toBeDefined();
@@ -72,17 +72,17 @@ describe('ExportOptions type', () => {
       format: 'png',
       exportBackground: false,
       viewBackgroundColor: '#000000',
-      exportWithDarkMode: true,
+      dark: true,
       exportEmbedScene: true,
       exportPadding: 20,
-      exportScale: 2,
+      scale: 2,
     };
     expect(opts.format).toBe('png');
     expect(opts.exportBackground).toBe(false);
     expect(opts.viewBackgroundColor).toBe('#000000');
-    expect(opts.exportWithDarkMode).toBe(true);
+    expect(opts.dark).toBe(true);
     expect(opts.exportEmbedScene).toBe(true);
     expect(opts.exportPadding).toBe(20);
-    expect(opts.exportScale).toBe(2);
+    expect(opts.scale).toBe(2);
   });
 });

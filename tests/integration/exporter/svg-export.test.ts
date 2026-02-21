@@ -90,8 +90,8 @@ describe('convertToSVG', () => {
   describe('dark mode', () => {
     it('should produce different SVG in dark mode', async () => {
       const file = createMinimalFile();
-      const lightSvg = await convertToSVG(file, { exportWithDarkMode: false });
-      const darkSvg = await convertToSVG(file, { exportWithDarkMode: true });
+      const lightSvg = await convertToSVG(file, { dark: false });
+      const darkSvg = await convertToSVG(file, { dark: true });
 
       // Both should be valid
       expect(lightSvg).toContain('<svg');
@@ -160,7 +160,7 @@ describe('convertImage with format=svg', () => {
     const result = await convertImage(file, {
       format: 'svg',
       exportBackground: false,
-      exportWithDarkMode: true,
+      dark: true,
       exportPadding: 20,
     });
 

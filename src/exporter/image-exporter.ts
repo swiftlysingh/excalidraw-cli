@@ -27,7 +27,7 @@ export interface ExportOptions {
   viewBackgroundColor?: string;
 
   /** Export with dark mode (default: false) */
-  exportWithDarkMode?: boolean;
+  dark?: boolean;
 
   /** Embed scene data into the exported image (default: false) */
   exportEmbedScene?: boolean;
@@ -36,7 +36,7 @@ export interface ExportOptions {
   exportPadding?: number;
 
   /** Scale factor for PNG export (default: 1). Higher values = higher resolution */
-  exportScale?: number;
+  scale?: number;
 }
 
 /**
@@ -46,10 +46,10 @@ export const DEFAULT_EXPORT_OPTIONS: Required<ExportOptions> = {
   format: 'svg',
   exportBackground: true,
   viewBackgroundColor: '#ffffff',
-  exportWithDarkMode: false,
+  dark: false,
   exportEmbedScene: false,
   exportPadding: 10,
-  exportScale: 1,
+  scale: 1,
 };
 
 /**
@@ -112,7 +112,7 @@ export async function convertToSVG(
     ...file.appState,
     exportBackground: opts.exportBackground,
     viewBackgroundColor: opts.viewBackgroundColor,
-    exportWithDarkMode: opts.exportWithDarkMode,
+    exportWithDarkMode: opts.dark,
     exportEmbedScene: opts.exportEmbedScene,
   };
 
@@ -163,7 +163,7 @@ function getExcalidrawFontDir(): string {
  * Convert an Excalidraw file to a PNG image buffer.
  *
  * Pipeline: Excalidraw → SVG (via {@link convertToSVG}) → PNG (via resvg-js).
- * The `exportScale` option controls the output resolution.
+ * The `scale` option controls the output resolution.
  *
  * Font rendering note: `@resvg/resvg-js` ignores `@font-face` CSS inside the
  * SVG, so bundled TTF font files are provided through the `fontDirs` option.
@@ -190,7 +190,7 @@ export async function convertToPNG(
   const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
   const naturalHeight = heightMatch ? parseFloat(heightMatch[1]) : 600;
 
-  const scaledWidth = Math.round(naturalWidth * opts.exportScale);
+  const scaledWidth = Math.round(naturalWidth * opts.scale);
 
   // Load Excalidraw font files for text rendering.
   // resvg-js does NOT parse @font-face CSS from SVG — fonts must be

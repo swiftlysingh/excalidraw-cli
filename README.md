@@ -231,8 +231,8 @@ writeFileSync('diagram.svg', svg);
 
 // Export to PNG with 2x scale and dark mode
 const png = await convertToPNG(file, {
-  exportScale: 2,
-  exportWithDarkMode: true,
+  scale: 2,
+  dark: true,
 });
 writeFileSync('diagram.png', png);
 ```
