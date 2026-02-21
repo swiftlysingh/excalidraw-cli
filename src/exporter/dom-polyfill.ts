@@ -159,7 +159,7 @@ export async function ensureDOMPolyfill(): Promise<void> {
   // Override global fetch to intercept font requests
   // @excalidraw/utils calls fetch(url) to load font data — we redirect
   // requests for our proxy base URL to local disk reads
-  const originalFetch = globalThis.fetch;
+  const originalFetch = globalThis.fetch ?? (() => { throw new Error('fetch not available'); });
   g.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string'
       ? input
