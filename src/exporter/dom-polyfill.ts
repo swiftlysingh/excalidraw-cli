@@ -15,9 +15,7 @@
 
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve, dirname } from 'node:path';
-
 /** Fake base URL used to route font fetches through our local file override */
 const FONT_PROXY_BASE = 'https://excalidraw-fonts.local/';
 
