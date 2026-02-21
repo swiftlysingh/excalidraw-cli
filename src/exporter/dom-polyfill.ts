@@ -24,7 +24,10 @@ const FONT_PROXY_BASE = 'https://excalidraw-fonts.local/';
 let polyfillApplied = false;
 
 /**
- * Resolve the path to @excalidraw/utils bundled font assets directory
+ * Resolve the absolute path to the `@excalidraw/utils` bundled font
+ * assets directory (contains `.ttf` / `.woff2` files).
+ *
+ * @returns Absolute path to the assets directory.
  */
 function getAssetsDir(): string {
   const require = createRequire(import.meta.url);
@@ -35,6 +38,22 @@ function getAssetsDir(): string {
   return resolve(utilsDir, 'assets');
 }
 
+/**
+ * Initialise the minimal browser-like environment that @excalidraw/utils
+ * requires to render SVGs in Node.js.
+ *
+ * This is idempotent — calling it more than once is a no-op.
+ *
+ * What gets polyfilled:
+ * - Core DOM globals via jsdom (`window`, `document`, `navigator`, etc.)
+ * - `Path2D` stub for roughjs shape generation
+ * - `FontFace` constructor with `unicodeRange` support
+ * - `document.fonts` (`FontFaceSet`) for font registration
+ * - `fetch()` override to load bundled font files from disk
+ * - `EXCALIDRAW_ASSET_PATH` pointed at the local font proxy URL
+ *
+ * @returns A promise that resolves once the polyfill is in place.
+ */
 export async function ensureDOMPolyfill(): Promise<void> {
   if (polyfillApplied) return;
 

@@ -1,3 +1,10 @@
+/**
+ * Integration tests for edge cases and error handling in the image exporter.
+ *
+ * Covers format routing, real file exports, option priority, combined options,
+ * consistency (deterministic output), deleted elements, and SVG structure.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';

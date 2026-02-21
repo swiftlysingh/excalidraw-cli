@@ -1,3 +1,10 @@
+/**
+ * Integration tests for SVG export.
+ *
+ * Validates that {@link convertToSVG} produces well-formed SVG strings
+ * and that background, dark-mode, and padding options are applied correctly.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { convertToSVG, convertImage } from '../../../src/exporter/image-exporter.js';
 import {

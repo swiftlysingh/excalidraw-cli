@@ -1,3 +1,10 @@
+/**
+ * Unit tests for {@link DEFAULT_EXPORT_OPTIONS} and the {@link ExportOptions} type.
+ *
+ * Ensures the default values are sensible and that the type allows both
+ * minimal (format-only) and fully-specified option objects.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_EXPORT_OPTIONS } from '../../../src/exporter/image-exporter.js';
 import type { ExportOptions } from '../../../src/exporter/image-exporter.js';

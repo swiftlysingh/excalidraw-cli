@@ -1,3 +1,10 @@
+/**
+ * Integration tests for PNG export.
+ *
+ * Validates that {@link convertToPNG} produces valid PNG buffers and
+ * that scale, background, dark-mode, and padding options behave correctly.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { convertToPNG, convertImage } from '../../../src/exporter/image-exporter.js';
 import {

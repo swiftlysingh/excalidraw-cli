@@ -10,6 +10,9 @@ import { resolve, dirname } from 'node:path';
 import { ensureDOMPolyfill } from './dom-polyfill.js';
 import type { ExcalidrawFile } from '../types/excalidraw.js';
 
+/** Native `console.error` captured at module load so concurrent calls cannot corrupt each other. */
+const NATIVE_CONSOLE_ERROR = console.error;
+
 /**
  * Export options matching Excalidraw website capabilities
  */
@@ -50,7 +53,16 @@ export const DEFAULT_EXPORT_OPTIONS: Required<ExportOptions> = {
 };
 
 /**
- * Merge user options with defaults, applying appState values where appropriate
+ * Merge user options with defaults, applying appState values where appropriate.
+ *
+ * Priority order (highest → lowest):
+ * 1. Explicitly provided options
+ * 2. Values from the file's `appState` (e.g. `viewBackgroundColor`)
+ * 3. `DEFAULT_EXPORT_OPTIONS`
+ *
+ * @param file    - The Excalidraw file whose `appState` supplies fallback values.
+ * @param options - Partial options supplied by the caller.
+ * @returns Fully-resolved options with every field populated.
  */
 function resolveOptions(
   file: ExcalidrawFile,
@@ -68,7 +80,15 @@ function resolveOptions(
 }
 
 /**
- * Export an Excalidraw file to SVG string
+ * Convert an Excalidraw file to an SVG string.
+ *
+ * Internally initialises the DOM polyfill (if not already done) and
+ * delegates to `@excalidraw/utils.exportToSvg` for the actual rendering.
+ * Console noise from font / Path2D warnings is suppressed during the call.
+ *
+ * @param file    - The Excalidraw file to convert.
+ * @param options - Optional overrides for background, dark-mode, padding, etc.
+ * @returns The rendered SVG markup as a string.
  */
 export async function convertToSVG(
   file: ExcalidrawFile,
@@ -96,12 +116,13 @@ export async function convertToSVG(
     exportEmbedScene: opts.exportEmbedScene,
   };
 
-  // Suppress noisy @excalidraw/utils font/Path2D warnings during export
-  const originalError = console.error;
+  // Suppress noisy @excalidraw/utils font/Path2D warnings during export.
+  // Uses the module-level NATIVE_CONSOLE_ERROR so concurrent calls don't
+  // capture each other's patched version.
   console.error = (...args: unknown[]) => {
     const msg = String(args[0] || '');
     if (msg.includes('font-face') || msg.includes('Path2D')) return;
-    originalError.apply(console, args);
+    NATIVE_CONSOLE_ERROR.apply(console, args);
   };
 
   try {
@@ -114,14 +135,18 @@ export async function convertToSVG(
 
     return svg.outerHTML;
   } finally {
-    console.error = originalError;
+    console.error = NATIVE_CONSOLE_ERROR;
   }
 }
 
 /**
  * Get the directory containing @excalidraw/utils bundled font assets (TTF files).
+ *
  * These are needed by resvg-js for text rendering since it doesn't
- * parse @font-face CSS from SVG — fonts must be provided via fontDirs.
+ * parse `@font-face` CSS from SVG — fonts must be provided via `fontDirs`.
+ * The result is cached after the first call.
+ *
+ * @returns Absolute path to the assets directory.
  */
 let cachedFontDir: string | null = null;
 function getExcalidrawFontDir(): string {
@@ -135,7 +160,17 @@ function getExcalidrawFontDir(): string {
 }
 
 /**
- * Export an Excalidraw file to PNG buffer
+ * Convert an Excalidraw file to a PNG image buffer.
+ *
+ * Pipeline: Excalidraw → SVG (via {@link convertToSVG}) → PNG (via resvg-js).
+ * The `exportScale` option controls the output resolution.
+ *
+ * Font rendering note: `@resvg/resvg-js` ignores `@font-face` CSS inside the
+ * SVG, so bundled TTF font files are provided through the `fontDirs` option.
+ *
+ * @param file    - The Excalidraw file to convert.
+ * @param options - Optional overrides for scale, background, dark-mode, etc.
+ * @returns A Buffer containing the PNG image data.
  */
 export async function convertToPNG(
   file: ExcalidrawFile,
@@ -181,8 +216,14 @@ export async function convertToPNG(
 }
 
 /**
- * Export an Excalidraw file to the specified format
- * Returns either an SVG string or a PNG Buffer
+ * Convert an Excalidraw file to the specified image format.
+ *
+ * This is the main entry-point that routes to {@link convertToSVG} or
+ * {@link convertToPNG} based on `options.format`.
+ *
+ * @param file    - The Excalidraw file to convert.
+ * @param options - Export options; `format` is required (`'svg'` | `'png'`).
+ * @returns An SVG string when `format` is `'svg'`, or a PNG `Buffer` when `'png'`.
  */
 export async function convertImage(
   file: ExcalidrawFile,
@@ -195,7 +236,18 @@ export async function convertImage(
 }
 
 /**
- * Swap a file path's extension
+ * Replace a file path's extension with a new one.
+ *
+ * If the path has no extension (no dot, or dot at position 0 like `.gitignore`),
+ * the new extension is appended instead.
+ *
+ * @param filePath - The original file path (may include directories).
+ * @param newExt   - The new extension **without** the leading dot (e.g. `'svg'`).
+ * @returns The file path with its extension swapped.
+ *
+ * @example
+ * swapExtension('diagram.excalidraw', 'png') // → 'diagram.png'
+ * swapExtension('/tmp/out.json', 'svg')       // → '/tmp/out.svg'
  */
 export function swapExtension(filePath: string, newExt: string): string {
   const lastDot = filePath.lastIndexOf('.');

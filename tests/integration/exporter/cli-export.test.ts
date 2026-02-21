@@ -1,3 +1,11 @@
+/**
+ * Integration tests for the CLI export / convert commands.
+ *
+ * Spawns the compiled CLI binary (`dist/cli.js`) in a subprocess and
+ * verifies that `create --export-as` and standalone `convert` produce
+ * valid SVG / PNG output files with the expected options applied.
+ */
+
 import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { execFileSync } from 'child_process';
 import { readFileSync, existsSync, unlinkSync, writeFileSync, mkdirSync } from 'fs';
@@ -35,11 +43,15 @@ function runCLI(args: string[], options?: { expectError?: boolean }): {
   }
 }
 
-/**
- * Helper to clean up temporary files after tests.
- */
+/** Accumulator of file paths to delete in the `afterEach` hook. */
 const filesToClean: string[] = [];
 
+/**
+ * Register a temporary file path for automatic cleanup after each test.
+ *
+ * @param name - File name (relative to `TMP_DIR`).
+ * @returns The absolute path to the temporary file.
+ */
 function tmpFile(name: string): string {
   const path = join(TMP_DIR, name);
   filesToClean.push(path);

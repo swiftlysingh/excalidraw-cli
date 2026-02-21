@@ -141,8 +141,8 @@ program
           viewBackgroundColor: options.backgroundColor,
           exportWithDarkMode: options.dark || false,
           exportEmbedScene: options.embedScene || false,
-          exportPadding: parseInt(options.exportPadding, 10) || 10,
-          exportScale: parseFloat(options.scale) || 1,
+        exportPadding: parseInt(options.exportPadding, 10),
+        exportScale: parseFloat(options.scale),
         };
 
         const imageOutput = swapExtension(
@@ -264,8 +264,8 @@ program
         viewBackgroundColor: options.backgroundColor,
         exportWithDarkMode: options.dark || false,
         exportEmbedScene: options.embedScene || false,
-        exportPadding: parseInt(options.exportPadding, 10) || 10,
-        exportScale: parseFloat(options.scale) || 1,
+        exportPadding: parseInt(options.exportPadding, 10),
+        exportScale: parseFloat(options.scale),
       };
 
       const outputPath = options.output || swapExtension(inputFile, format);

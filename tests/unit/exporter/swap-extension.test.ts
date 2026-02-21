@@ -1,3 +1,10 @@
+/**
+ * Unit tests for the {@link swapExtension} utility.
+ *
+ * Covers basic swaps, paths with directories, filenames with multiple dots,
+ * dotfiles, and various target extensions.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { swapExtension } from '../../../src/exporter/image-exporter.js';
 
