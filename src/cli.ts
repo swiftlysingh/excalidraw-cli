@@ -13,6 +13,9 @@ import { parseJSONString } from './parser/json-parser.js';
 import { parseDOT } from './parser/dot-parser.js';
 import { layoutGraph } from './layout/elk-layout.js';
 import { generateExcalidraw, serializeExcalidraw } from './generator/excalidraw-generator.js';
+import { convertImage, swapExtension } from './exporter/index.js';
+import type { ExportOptions } from './exporter/index.js';
+import type { ExcalidrawFile } from './types/excalidraw.js';
 import type { FlowchartGraph, FlowDirection } from './types/dsl.js';
 
 const program = new Command();
@@ -20,7 +23,7 @@ const program = new Command();
 program
   .name('excalidraw-cli')
   .description('Create Excalidraw flowcharts from DSL, JSON, or DOT')
-  .version('1.0.1');
+  .version('1.1.0');
 
 /**
  * Create command - main flowchart creation
@@ -171,6 +174,84 @@ program
       }
     } catch (error) {
       console.error('Parse error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+/**
+ * Convert command - convert an existing .excalidraw file to PNG or SVG
+ */
+program
+  .command('convert')
+  .description('Convert an existing .excalidraw file to PNG or SVG')
+  .argument('<input>', 'Input .excalidraw file path')
+  .requiredOption('--format <format>', 'Export format: png or svg')
+  .option('-o, --output <file>', 'Output file path (default: input file with swapped extension)')
+  .option('--export-background', 'Include background in export (default: true)')
+  .option('--no-export-background', 'Exclude background from export')
+  .option('--background-color <color>', 'Background color (default: #ffffff)')
+  .option('--dark', 'Export with dark mode')
+  .option('--embed-scene', 'Embed scene data in exported image')
+  .option('--padding <n>', 'Padding around content in pixels', '10')
+  .option('--scale <n>', 'Scale factor for PNG export', '1')
+  .option('--verbose', 'Verbose output')
+  .action(async (inputFile, options) => {
+    try {
+      const format = options.format.toLowerCase();
+      if (format !== 'png' && format !== 'svg') {
+        console.error('Error: --format must be "png" or "svg"');
+        process.exit(1);
+      }
+
+      // Read the .excalidraw file
+      const rawInput = readFileSync(inputFile, 'utf-8');
+      const excalidrawFile: ExcalidrawFile = JSON.parse(rawInput);
+
+      if (options.verbose) {
+        console.log(`Input: ${inputFile}`);
+        console.log(`Elements: ${excalidrawFile.elements?.length || 0}`);
+        console.log(`Files: ${Object.keys(excalidrawFile.files || {}).length}`);
+      }
+
+      const padding = parseInt(options.padding, 10);
+      if (Number.isNaN(padding) || padding < 0) {
+        console.error('Error: --padding must be a non-negative integer');
+        process.exit(1);
+      }
+
+      const scale = parseFloat(options.scale);
+      if (Number.isNaN(scale) || scale <= 0) {
+        console.error('Error: --scale must be a positive number');
+        process.exit(1);
+      }
+
+      const exportOpts: ExportOptions = {
+        format: format as 'png' | 'svg',
+        exportBackground: options.exportBackground !== false,
+        viewBackgroundColor: options.backgroundColor,
+        dark: options.dark || false,
+        exportEmbedScene: options.embedScene || false,
+        padding,
+        scale,
+      };
+
+      const outputPath = options.output || swapExtension(inputFile, format);
+
+      if (options.verbose) {
+        console.log(`Exporting as ${format.toUpperCase()} to ${outputPath}...`);
+      }
+
+      const result = await convertImage(excalidrawFile, exportOpts);
+
+      if (typeof result === 'string') {
+        writeFileSync(outputPath, result, 'utf-8');
+      } else {
+        writeFileSync(outputPath, result);
+      }
+
+      console.log(`Exported: ${outputPath}`);
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
       process.exit(1);
     }
   });

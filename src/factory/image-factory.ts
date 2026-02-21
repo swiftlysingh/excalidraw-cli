@@ -32,10 +32,13 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 /**
- * Get MIME type from file path or URL
+ * Get MIME type from file path or URL.
+ * Strips query parameters and hash fragments before extracting the extension.
  */
 function getMimeType(src: string): string {
-  const ext = path.extname(src).toLowerCase();
+  // Remove query params and hash fragments that would pollute the extension
+  const cleaned = src.split('?')[0].split('#')[0];
+  const ext = path.extname(cleaned).toLowerCase();
   return MIME_TYPES[ext] || 'image/png';
 }
 

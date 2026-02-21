@@ -20,11 +20,13 @@
 - **JSON API** for programmatic use
 - **Auto-layout** using ELK.js (Eclipse Layout Kernel)
 - **Multiple flow directions**: TB (top-bottom), BT, LR, RL
+- **Export to PNG & SVG** with dark mode, custom backgrounds, scale, and padding
 - **Programmable API** for integration into other tools
+
 
 ## Installation
 
-### Using the npm
+### Using npm
 
 ```bash
 npm i @swiftlysingh/excalidraw-cli
@@ -60,6 +62,19 @@ excalidraw-cli create flowchart.dsl -o diagram.excalidraw
 
 # From stdin
 echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
+```
+
+### Export to Image
+
+```bash
+# Convert an existing .excalidraw file to PNG
+excalidraw-cli convert diagram.excalidraw --format png
+
+# Convert with options
+excalidraw-cli convert diagram.excalidraw --format png --scale 2 --dark
+
+# Convert to SVG without background
+excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 ```
 
 ### DSL Syntax
@@ -103,11 +118,30 @@ excalidraw-cli create [input] [options]
 
 **Options:**
 - `-o, --output <file>` - Output file path (default: flowchart.excalidraw)
-- `-f, --format <type>` - Input format: dsl, json (default: dsl)
+- `-f, --format <type>` - Input format: dsl, json, dot (default: dsl)
 - `--inline <dsl>` - Inline DSL string
 - `--stdin` - Read from stdin
 - `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
 - `-s, --spacing <n>` - Node spacing in pixels
+- `--verbose` - Verbose output
+
+#### `convert`
+
+Convert an existing `.excalidraw` file to PNG or SVG.
+
+```bash
+excalidraw-cli convert <input> [options]
+```
+
+**Options:**
+- `--format <format>` - **(required)** Export format: `png` or `svg`
+- `-o, --output <file>` - Output file path (default: input file with swapped extension)
+- `--export-background / --no-export-background` - Include or exclude background
+- `--background-color <color>` - Background color (default: #ffffff)
+- `--dark` - Export with dark mode theme
+- `--embed-scene` - Embed scene data in exported image
+- `--padding <n>` - Padding around content in pixels (default: 10)
+- `--scale <n>` - Scale factor for PNG export (default: 1)
 - `--verbose` - Verbose output
 
 #### `parse`
@@ -147,7 +181,12 @@ excalidraw-cli create flowchart.json -o diagram.excalidraw
 ## Programmatic Usage
 
 ```typescript
-import { createFlowchartFromDSL, createFlowchartFromJSON } from 'excalidraw-cli';
+import {
+  createFlowchartFromDSL,
+  createFlowchartFromJSON,
+  convertToSVG,
+  convertToPNG,
+} from '@swiftlysingh/excalidraw-cli';
 
 // From DSL
 const dsl = '(Start) -> [Process] -> (End)';
@@ -162,6 +201,27 @@ const input = {
   edges: [{ from: 'a', to: 'b' }]
 };
 const json2 = await createFlowchartFromJSON(input);
+```
+
+### Export API
+
+```typescript
+import { convertToSVG, convertToPNG } from '@swiftlysingh/excalidraw-cli';
+import { readFileSync, writeFileSync } from 'fs';
+
+// Load an existing .excalidraw file
+const file = JSON.parse(readFileSync('diagram.excalidraw', 'utf-8'));
+
+// Export to SVG
+const svg = await convertToSVG(file, { padding: 20 });
+writeFileSync('diagram.svg', svg);
+
+// Export to PNG with 2x scale and dark mode
+const png = await convertToPNG(file, {
+  scale: 2,
+  dark: true,
+});
+writeFileSync('diagram.png', png);
 ```
 
 ## Examples
@@ -184,6 +244,11 @@ The generated `.excalidraw` files can be:
 1. Opened directly in [Excalidraw](https://excalidraw.com) (File > Open)
 2. Imported into Obsidian with the Excalidraw plugin
 3. Used with any tool that supports the Excalidraw format
+
+With the `convert` command, you can also generate:
+
+- **SVG** — scalable vector graphics, ideal for embedding in docs or web pages
+- **PNG** — raster images at any scale (1×, 2×, 3×, etc.) for presentations or sharing
 
 ## License
 

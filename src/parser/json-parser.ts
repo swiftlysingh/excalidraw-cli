@@ -18,7 +18,7 @@ import { DEFAULT_LAYOUT_OPTIONS } from '../types/dsl.js';
  * Validate node type
  */
 function isValidNodeType(type: string): type is NodeType {
-  return ['rectangle', 'diamond', 'ellipse', 'database'].includes(type);
+  return ['rectangle', 'diamond', 'ellipse', 'database', 'image'].includes(type);
 }
 
 /**
