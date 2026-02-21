@@ -160,7 +160,7 @@ describe('CLI export command', () => {
       expect(existsSync(svgFile)).toBe(true);
     }, 60000);
 
-    it('should respect --export-scale in create command', () => {
+    it('should respect --scale in create command', () => {
       const outFile = tmpFile('cli-scale.excalidraw');
 
       runCLI([
@@ -171,7 +171,7 @@ describe('CLI export command', () => {
         outFile,
         '--export-as',
         'png',
-        '--export-scale',
+        '--scale',
         '2',
       ]);
 
@@ -205,7 +205,7 @@ describe('CLI export command', () => {
     }, 60000);
   });
 
-  describe('standalone export command', () => {
+  describe('standalone convert command', () => {
     it('should export existing .excalidraw to SVG', () => {
       // First, write a test .excalidraw file
       const inputFile = tmpFile('export-test.excalidraw');
@@ -213,7 +213,7 @@ describe('CLI export command', () => {
 
       const svgFile = tmpFile('export-test.svg');
 
-      runCLI(['export', inputFile, '-F', 'svg', '-o', svgFile]);
+      runCLI(['convert', inputFile, '--format', 'svg', '-o', svgFile]);
 
       expect(existsSync(svgFile)).toBe(true);
       const svgContent = readFileSync(svgFile, 'utf-8');
@@ -226,7 +226,7 @@ describe('CLI export command', () => {
 
       const pngFile = tmpFile('export-test-png.png');
 
-      runCLI(['export', inputFile, '-F', 'png', '-o', pngFile]);
+      runCLI(['convert', inputFile, '--format', 'png', '-o', pngFile]);
 
       expect(existsSync(pngFile)).toBe(true);
       const pngData = readFileSync(pngFile);
@@ -237,7 +237,7 @@ describe('CLI export command', () => {
       const inputFile = tmpFile('autoname.excalidraw');
       writeFileSync(inputFile, JSON.stringify(createMinimalFile()), 'utf-8');
 
-      runCLI(['export', inputFile, '-F', 'svg']);
+      runCLI(['convert', inputFile, '--format', 'svg']);
 
       const autoSvg = inputFile.replace('.excalidraw', '.svg');
       filesToClean.push(autoSvg);
@@ -251,9 +251,9 @@ describe('CLI export command', () => {
       const svgFile = tmpFile('verbose-test.svg');
 
       const { stdout } = runCLI([
-        'export',
+        'convert',
         inputFile,
-        '-F',
+        '--format',
         'svg',
         '-o',
         svgFile,
@@ -270,7 +270,7 @@ describe('CLI export command', () => {
       writeFileSync(inputFile, JSON.stringify(createMinimalFile()), 'utf-8');
 
       const { stderr } = runCLI(
-        ['export', inputFile, '-F', 'bmp'],
+        ['convert', inputFile, '--format', 'bmp'],
         { expectError: true }
       );
 
@@ -279,7 +279,7 @@ describe('CLI export command', () => {
 
     it('should fail when input file does not exist', () => {
       const { stderr } = runCLI(
-        ['export', 'nonexistent.excalidraw', '-F', 'svg'],
+        ['convert', 'nonexistent.excalidraw', '--format', 'svg'],
         { expectError: true }
       );
 
@@ -291,7 +291,7 @@ describe('CLI export command', () => {
       writeFileSync(inputFile, 'this is not json', 'utf-8');
 
       const { stderr } = runCLI(
-        ['export', inputFile, '-F', 'svg'],
+        ['convert', inputFile, '--format', 'svg'],
         { expectError: true }
       );
 
@@ -305,9 +305,9 @@ describe('CLI export command', () => {
       const svgFile = tmpFile('dark-nobg.svg');
 
       runCLI([
-        'export',
+        'convert',
         inputFile,
-        '-F',
+        '--format',
         'svg',
         '-o',
         svgFile,
@@ -327,13 +327,13 @@ describe('CLI export command', () => {
       const pngFile = tmpFile('scaled.png');
 
       runCLI([
-        'export',
+        'convert',
         inputFile,
-        '-F',
+        '--format',
         'png',
         '-o',
         pngFile,
-        '--export-scale',
+        '--scale',
         '3',
       ]);
 

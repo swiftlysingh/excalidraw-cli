@@ -69,14 +69,14 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 # Export while creating a flowchart
 excalidraw-cli create --inline "[A] -> [B]" -o flow.excalidraw --export-as svg
 
-# Export an existing .excalidraw file to PNG
-excalidraw-cli export diagram.excalidraw -F png
+# Convert an existing .excalidraw file to PNG
+excalidraw-cli convert diagram.excalidraw --format png
 
-# Export with options
-excalidraw-cli export diagram.excalidraw -F png --export-scale 2 --dark-mode
+# Convert with options
+excalidraw-cli convert diagram.excalidraw --format png --scale 2 --dark-mode
 
-# Export SVG without background
-excalidraw-cli export diagram.excalidraw -F svg --no-export-background
+# Convert to SVG without background
+excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 ```
 
 ### DSL Syntax
@@ -131,26 +131,26 @@ excalidraw-cli create [input] [options]
 - `--dark-mode` - Export with dark mode theme
 - `--embed-scene` - Embed scene data in exported image
 - `--export-padding <n>` - Padding around content in pixels (default: 10)
-- `--export-scale <n>` - Scale factor for PNG export (default: 1)
+- `--scale <n>` - Scale factor for PNG export (default: 1)
 - `--verbose` - Verbose output
 
-#### `export`
+#### `convert`
 
-Export an existing `.excalidraw` file to PNG or SVG.
+Convert an existing `.excalidraw` file to PNG or SVG.
 
 ```bash
-excalidraw-cli export <input> [options]
+excalidraw-cli convert <input> [options]
 ```
 
 **Options:**
-- `-F, --format <format>` - **(required)** Export format: `png` or `svg`
+- `--format <format>` - **(required)** Export format: `png` or `svg`
 - `-o, --output <file>` - Output file path (default: input file with swapped extension)
 - `--export-background / --no-export-background` - Include or exclude background
 - `--background-color <color>` - Background color (default: #ffffff)
 - `--dark-mode` - Export with dark mode theme
 - `--embed-scene` - Embed scene data in exported image
 - `--export-padding <n>` - Padding around content in pixels (default: 10)
-- `--export-scale <n>` - Scale factor for PNG export (default: 1)
+- `--scale <n>` - Scale factor for PNG export (default: 1)
 - `--verbose` - Verbose output
 
 #### `parse`

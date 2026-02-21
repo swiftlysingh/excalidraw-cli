@@ -45,7 +45,7 @@ program
   .option('--dark-mode', 'Export with dark mode')
   .option('--embed-scene', 'Embed scene data in exported image')
   .option('--export-padding <n>', 'Padding around exported content in pixels', '10')
-  .option('--export-scale <n>', 'Scale factor for PNG export (default: 1)', '1')
+  .option('--scale <n>', 'Scale factor for PNG export (default: 1)', '1')
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options, command) => {
     try {
@@ -142,7 +142,7 @@ program
           exportWithDarkMode: options.darkMode || false,
           exportEmbedScene: options.embedScene || false,
           exportPadding: parseInt(options.exportPadding, 10) || 10,
-          exportScale: parseFloat(options.exportScale) || 1,
+          exportScale: parseFloat(options.scale) || 1,
         };
 
         const imageOutput = swapExtension(
@@ -224,13 +224,13 @@ program
   });
 
 /**
- * Export command - convert an existing .excalidraw file to PNG or SVG
+ * Convert command - convert an existing .excalidraw file to PNG or SVG
  */
 program
-  .command('export')
-  .description('Export an existing .excalidraw file to PNG or SVG')
+  .command('convert')
+  .description('Convert an existing .excalidraw file to PNG or SVG')
   .argument('<input>', 'Input .excalidraw file path')
-  .requiredOption('-F, --format <format>', 'Export format: png or svg')
+  .requiredOption('--format <format>', 'Export format: png or svg')
   .option('-o, --output <file>', 'Output file path (default: input file with swapped extension)')
   .option('--export-background', 'Include background in export (default: true)')
   .option('--no-export-background', 'Exclude background from export')
@@ -238,7 +238,7 @@ program
   .option('--dark-mode', 'Export with dark mode')
   .option('--embed-scene', 'Embed scene data in exported image')
   .option('--export-padding <n>', 'Padding around content in pixels', '10')
-  .option('--export-scale <n>', 'Scale factor for PNG export', '1')
+  .option('--scale <n>', 'Scale factor for PNG export', '1')
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options) => {
     try {
@@ -265,7 +265,7 @@ program
         exportWithDarkMode: options.darkMode || false,
         exportEmbedScene: options.embedScene || false,
         exportPadding: parseInt(options.exportPadding, 10) || 10,
-        exportScale: parseFloat(options.exportScale) || 1,
+        exportScale: parseFloat(options.scale) || 1,
       };
 
       const outputPath = options.output || swapExtension(inputFile, format);
