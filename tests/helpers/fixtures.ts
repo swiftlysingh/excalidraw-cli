@@ -3,7 +3,7 @@
  * Provides minimal valid ExcalidrawFile fixtures.
  */
 
-import type { ExcalidrawFile } from '../../../src/types/excalidraw.js';
+import type { ExcalidrawFile } from '../../src/types/excalidraw.js';
 
 /**
  * Create a minimal ExcalidrawFile with a single rectangle element.
