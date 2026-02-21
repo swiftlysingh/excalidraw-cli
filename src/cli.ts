@@ -213,14 +213,26 @@ program
         console.log(`Files: ${Object.keys(excalidrawFile.files || {}).length}`);
       }
 
+      const padding = parseInt(options.padding, 10);
+      if (Number.isNaN(padding) || padding < 0) {
+        console.error('Error: --padding must be a non-negative integer');
+        process.exit(1);
+      }
+
+      const scale = parseFloat(options.scale);
+      if (Number.isNaN(scale) || scale <= 0) {
+        console.error('Error: --scale must be a positive number');
+        process.exit(1);
+      }
+
       const exportOpts: ExportOptions = {
         format: format as 'png' | 'svg',
         exportBackground: options.exportBackground !== false,
         viewBackgroundColor: options.backgroundColor,
         dark: options.dark || false,
         exportEmbedScene: options.embedScene || false,
-        padding: parseInt(options.padding, 10),
-        scale: parseFloat(options.scale),
+        padding,
+        scale,
       };
 
       const outputPath = options.output || swapExtension(inputFile, format);
