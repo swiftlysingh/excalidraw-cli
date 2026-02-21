@@ -23,9 +23,13 @@
 - **Export to PNG & SVG** with dark mode, custom backgrounds, scale, and padding
 - **Programmable API** for integration into other tools
 
+## Requirements
+
+- **Node.js** `^20.19.0 || ^22.12.0 || >=24.0.0`
+
 ## Installation
 
-### Using the npm
+### Using npm
 
 ```bash
 npm i @swiftlysingh/excalidraw-cli
@@ -120,7 +124,7 @@ excalidraw-cli create [input] [options]
 
 **Options:**
 - `-o, --output <file>` - Output file path (default: flowchart.excalidraw)
-- `-f, --format <type>` - Input format: dsl, json (default: dsl)
+- `-f, --format <type>` - Input format: dsl, json, dot (default: dsl)
 - `--inline <dsl>` - Inline DSL string
 - `--stdin` - Read from stdin
 - `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
@@ -254,7 +258,7 @@ The generated `.excalidraw` files can be:
 2. Imported into Obsidian with the Excalidraw plugin
 3. Used with any tool that supports the Excalidraw format
 
-With the `--export-as` flag or `export` command, you can also generate:
+With the `--export-as` flag or `convert` command, you can also generate:
 
 - **SVG** — scalable vector graphics, ideal for embedding in docs or web pages
 - **PNG** — raster images at any scale (1×, 2×, 3×, etc.) for presentations or sharing
