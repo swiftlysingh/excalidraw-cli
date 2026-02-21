@@ -3,9 +3,9 @@
  */
 
 export {
-  exportToSVG,
-  exportToPNG,
-  exportImage,
+  convertToSVG,
+  convertToPNG,
+  convertImage,
   swapExtension,
   DEFAULT_EXPORT_OPTIONS,
 } from './image-exporter.js';

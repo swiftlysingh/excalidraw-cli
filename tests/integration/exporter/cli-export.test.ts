@@ -119,7 +119,7 @@ describe('CLI export command', () => {
       expect(pngData.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
     }, 60000);
 
-    it('should respect --dark-mode flag in create command', () => {
+    it('should respect --dark flag in create command', () => {
       const outFile = tmpFile('cli-dark.excalidraw');
 
       runCLI([
@@ -130,7 +130,7 @@ describe('CLI export command', () => {
         outFile,
         '--export-as',
         'svg',
-        '--dark-mode',
+        '--dark',
       ]);
 
       const svgFile = outFile.replace('.excalidraw', '.svg');
@@ -311,7 +311,7 @@ describe('CLI export command', () => {
         'svg',
         '-o',
         svgFile,
-        '--dark-mode',
+        '--dark',
         '--no-export-background',
       ]);
 

@@ -73,7 +73,7 @@ excalidraw-cli create --inline "[A] -> [B]" -o flow.excalidraw --export-as svg
 excalidraw-cli convert diagram.excalidraw --format png
 
 # Convert with options
-excalidraw-cli convert diagram.excalidraw --format png --scale 2 --dark-mode
+excalidraw-cli convert diagram.excalidraw --format png --scale 2 --dark
 
 # Convert to SVG without background
 excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
@@ -128,7 +128,7 @@ excalidraw-cli create [input] [options]
 - `-e, --export-as <format>` - Also export as image: `png` or `svg`
 - `--export-background / --no-export-background` - Include or exclude background (default: include)
 - `--background-color <color>` - Background color (default: #ffffff)
-- `--dark-mode` - Export with dark mode theme
+- `--dark` - Export with dark mode theme
 - `--embed-scene` - Embed scene data in exported image
 - `--export-padding <n>` - Padding around content in pixels (default: 10)
 - `--scale <n>` - Scale factor for PNG export (default: 1)
@@ -147,7 +147,7 @@ excalidraw-cli convert <input> [options]
 - `-o, --output <file>` - Output file path (default: input file with swapped extension)
 - `--export-background / --no-export-background` - Include or exclude background
 - `--background-color <color>` - Background color (default: #ffffff)
-- `--dark-mode` - Export with dark mode theme
+- `--dark` - Export with dark mode theme
 - `--embed-scene` - Embed scene data in exported image
 - `--export-padding <n>` - Padding around content in pixels (default: 10)
 - `--scale <n>` - Scale factor for PNG export (default: 1)
@@ -193,8 +193,8 @@ excalidraw-cli create flowchart.json -o diagram.excalidraw
 import {
   createFlowchartFromDSL,
   createFlowchartFromJSON,
-  exportToSVG,
-  exportToPNG,
+  convertToSVG,
+  convertToPNG,
 } from '@swiftlysingh/excalidraw-cli';
 
 // From DSL
@@ -215,18 +215,18 @@ const json2 = await createFlowchartFromJSON(input);
 ### Export API
 
 ```typescript
-import { exportToSVG, exportToPNG } from '@swiftlysingh/excalidraw-cli';
+import { convertToSVG, convertToPNG } from '@swiftlysingh/excalidraw-cli';
 import { readFileSync, writeFileSync } from 'fs';
 
 // Load an existing .excalidraw file
 const file = JSON.parse(readFileSync('diagram.excalidraw', 'utf-8'));
 
 // Export to SVG
-const svg = await exportToSVG(file, { exportPadding: 20 });
+const svg = await convertToSVG(file, { exportPadding: 20 });
 writeFileSync('diagram.svg', svg);
 
 // Export to PNG with 2x scale and dark mode
-const png = await exportToPNG(file, {
+const png = await convertToPNG(file, {
   exportScale: 2,
   exportWithDarkMode: true,
 });

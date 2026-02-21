@@ -70,7 +70,7 @@ function resolveOptions(
 /**
  * Export an Excalidraw file to SVG string
  */
-export async function exportToSVG(
+export async function convertToSVG(
   file: ExcalidrawFile,
   options?: Partial<ExportOptions>
 ): Promise<string> {
@@ -137,14 +137,14 @@ function getExcalidrawFontDir(): string {
 /**
  * Export an Excalidraw file to PNG buffer
  */
-export async function exportToPNG(
+export async function convertToPNG(
   file: ExcalidrawFile,
   options?: Partial<ExportOptions>
 ): Promise<Buffer> {
   const opts = resolveOptions(file, { format: 'png', ...options });
 
   // First generate SVG
-  const svgString = await exportToSVG(file, opts);
+  const svgString = await convertToSVG(file, opts);
 
   // Use @resvg/resvg-js to convert SVG → PNG
   const { Resvg } = await import('@resvg/resvg-js');
@@ -184,14 +184,14 @@ export async function exportToPNG(
  * Export an Excalidraw file to the specified format
  * Returns either an SVG string or a PNG Buffer
  */
-export async function exportImage(
+export async function convertImage(
   file: ExcalidrawFile,
   options: ExportOptions
 ): Promise<string | Buffer> {
   if (options.format === 'png') {
-    return exportToPNG(file, options);
+    return convertToPNG(file, options);
   }
-  return exportToSVG(file, options);
+  return convertToSVG(file, options);
 }
 
 /**

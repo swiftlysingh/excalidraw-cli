@@ -13,7 +13,7 @@ import { parseJSONString } from './parser/json-parser.js';
 import { parseDOT } from './parser/dot-parser.js';
 import { layoutGraph } from './layout/elk-layout.js';
 import { generateExcalidraw, serializeExcalidraw } from './generator/excalidraw-generator.js';
-import { exportImage, swapExtension } from './exporter/index.js';
+import { convertImage, swapExtension } from './exporter/index.js';
 import type { ExportOptions } from './exporter/index.js';
 import type { ExcalidrawFile } from './types/excalidraw.js';
 import type { FlowchartGraph, FlowDirection } from './types/dsl.js';
@@ -42,7 +42,7 @@ program
   .option('--export-background', 'Include background in export (default: true)')
   .option('--no-export-background', 'Exclude background from export')
   .option('--background-color <color>', 'Background color for export (default: #ffffff)')
-  .option('--dark-mode', 'Export with dark mode')
+  .option('--dark', 'Export with dark mode')
   .option('--embed-scene', 'Embed scene data in exported image')
   .option('--export-padding <n>', 'Padding around exported content in pixels', '10')
   .option('--scale <n>', 'Scale factor for PNG export (default: 1)', '1')
@@ -139,7 +139,7 @@ program
           format: format as 'png' | 'svg',
           exportBackground: options.exportBackground !== false,
           viewBackgroundColor: options.backgroundColor,
-          exportWithDarkMode: options.darkMode || false,
+          exportWithDarkMode: options.dark || false,
           exportEmbedScene: options.embedScene || false,
           exportPadding: parseInt(options.exportPadding, 10) || 10,
           exportScale: parseFloat(options.scale) || 1,
@@ -154,7 +154,7 @@ program
           console.log(`Exporting as ${format.toUpperCase()}...`);
         }
 
-        const result = await exportImage(excalidrawFile, exportOpts);
+        const result = await convertImage(excalidrawFile, exportOpts);
 
         if (typeof result === 'string') {
           writeFileSync(imageOutput, result, 'utf-8');
@@ -235,7 +235,7 @@ program
   .option('--export-background', 'Include background in export (default: true)')
   .option('--no-export-background', 'Exclude background from export')
   .option('--background-color <color>', 'Background color (default: #ffffff)')
-  .option('--dark-mode', 'Export with dark mode')
+  .option('--dark', 'Export with dark mode')
   .option('--embed-scene', 'Embed scene data in exported image')
   .option('--export-padding <n>', 'Padding around content in pixels', '10')
   .option('--scale <n>', 'Scale factor for PNG export', '1')
@@ -262,7 +262,7 @@ program
         format: format as 'png' | 'svg',
         exportBackground: options.exportBackground !== false,
         viewBackgroundColor: options.backgroundColor,
-        exportWithDarkMode: options.darkMode || false,
+        exportWithDarkMode: options.dark || false,
         exportEmbedScene: options.embedScene || false,
         exportPadding: parseInt(options.exportPadding, 10) || 10,
         exportScale: parseFloat(options.scale) || 1,
@@ -274,7 +274,7 @@ program
         console.log(`Exporting as ${format.toUpperCase()} to ${outputPath}...`);
       }
 
-      const result = await exportImage(excalidrawFile, exportOpts);
+      const result = await convertImage(excalidrawFile, exportOpts);
 
       if (typeof result === 'string') {
         writeFileSync(outputPath, result, 'utf-8');

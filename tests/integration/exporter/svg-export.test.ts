@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { exportToSVG, exportImage } from '../../../src/exporter/image-exporter.js';
+import { convertToSVG, convertImage } from '../../../src/exporter/image-exporter.js';
 import {
   createMinimalFile,
   createMultiElementFile,
@@ -7,11 +7,11 @@ import {
   createFileWithBackground,
 } from '../../helpers/fixtures.js';
 
-describe('exportToSVG', () => {
+describe('convertToSVG', () => {
   describe('basic SVG generation', () => {
     it('should return a valid SVG string for a minimal file', async () => {
       const file = createMinimalFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toBeTypeOf('string');
       expect(svg).toContain('<svg');
@@ -20,7 +20,7 @@ describe('exportToSVG', () => {
 
     it('should produce SVG with width and height attributes', async () => {
       const file = createMinimalFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toMatch(/width="[\d.]+"/);
       expect(svg).toMatch(/height="[\d.]+"/);
@@ -28,14 +28,14 @@ describe('exportToSVG', () => {
 
     it('should produce SVG with a viewBox attribute', async () => {
       const file = createMinimalFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toMatch(/viewBox="[^"]+"/);
     }, 30000);
 
     it('should handle multi-element files', async () => {
       const file = createMultiElementFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toBeTypeOf('string');
       expect(svg).toContain('<svg');
@@ -46,7 +46,7 @@ describe('exportToSVG', () => {
   describe('background options', () => {
     it('should include background by default', async () => {
       const file = createMinimalFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       // Default background is #ffffff
       expect(svg).toContain('#ffffff');
@@ -54,14 +54,14 @@ describe('exportToSVG', () => {
 
     it('should respect custom background color from appState', async () => {
       const file = createFileWithBackground('#ff6600');
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toContain('#ff6600');
     }, 30000);
 
     it('should respect viewBackgroundColor option override', async () => {
       const file = createMinimalFile();
-      const svg = await exportToSVG(file, {
+      const svg = await convertToSVG(file, {
         viewBackgroundColor: '#00cc00',
       });
 
@@ -70,8 +70,8 @@ describe('exportToSVG', () => {
 
     it('should exclude background when exportBackground is false', async () => {
       const file = createMinimalFile();
-      const svgWithBg = await exportToSVG(file, { exportBackground: true });
-      const svgWithoutBg = await exportToSVG(file, { exportBackground: false });
+      const svgWithBg = await convertToSVG(file, { exportBackground: true });
+      const svgWithoutBg = await convertToSVG(file, { exportBackground: false });
 
       // Without background, the SVG may differ (no rect fill for background)
       // At minimum, both should be valid SVGs
@@ -83,8 +83,8 @@ describe('exportToSVG', () => {
   describe('dark mode', () => {
     it('should produce different SVG in dark mode', async () => {
       const file = createMinimalFile();
-      const lightSvg = await exportToSVG(file, { exportWithDarkMode: false });
-      const darkSvg = await exportToSVG(file, { exportWithDarkMode: true });
+      const lightSvg = await convertToSVG(file, { exportWithDarkMode: false });
+      const darkSvg = await convertToSVG(file, { exportWithDarkMode: true });
 
       // Both should be valid
       expect(lightSvg).toContain('<svg');
@@ -101,8 +101,8 @@ describe('exportToSVG', () => {
       const file = createMinimalFile();
 
       // These should not throw
-      const svg0 = await exportToSVG(file, { exportPadding: 0 });
-      const svg50 = await exportToSVG(file, { exportPadding: 50 });
+      const svg0 = await convertToSVG(file, { exportPadding: 0 });
+      const svg50 = await convertToSVG(file, { exportPadding: 50 });
 
       expect(svg0).toContain('<svg');
       expect(svg50).toContain('<svg');
@@ -110,8 +110,8 @@ describe('exportToSVG', () => {
 
     it('should produce wider SVG with larger padding', async () => {
       const file = createMinimalFile();
-      const svgSmallPad = await exportToSVG(file, { exportPadding: 5 });
-      const svgLargePad = await exportToSVG(file, { exportPadding: 100 });
+      const svgSmallPad = await convertToSVG(file, { exportPadding: 5 });
+      const svgLargePad = await convertToSVG(file, { exportPadding: 100 });
 
       // Extract width values
       const widthSmall = parseFloat(svgSmallPad.match(/width="([\d.]+)"/)?.[1] || '0');
@@ -128,7 +128,7 @@ describe('exportToSVG', () => {
 
       // Should not throw - may produce empty or minimal SVG
       try {
-        const svg = await exportToSVG(file);
+        const svg = await convertToSVG(file);
         expect(svg).toBeTypeOf('string');
       } catch (error) {
         // Some versions of @excalidraw/utils may throw on empty elements
@@ -139,10 +139,10 @@ describe('exportToSVG', () => {
   });
 });
 
-describe('exportImage with format=svg', () => {
+describe('convertImage with format=svg', () => {
   it('should return string for SVG format', async () => {
     const file = createMinimalFile();
-    const result = await exportImage(file, { format: 'svg' });
+    const result = await convertImage(file, { format: 'svg' });
 
     expect(result).toBeTypeOf('string');
     expect(result as string).toContain('<svg');
@@ -150,7 +150,7 @@ describe('exportImage with format=svg', () => {
 
   it('should pass through all options to SVG export', async () => {
     const file = createMinimalFile();
-    const result = await exportImage(file, {
+    const result = await convertImage(file, {
       format: 'svg',
       exportBackground: false,
       exportWithDarkMode: true,

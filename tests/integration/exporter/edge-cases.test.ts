@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  exportToSVG,
-  exportToPNG,
-  exportImage,
+  convertToSVG,
+  convertToPNG,
+  convertImage,
 } from '../../../src/exporter/image-exporter.js';
 import type { ExcalidrawFile } from '../../../src/types/excalidraw.js';
 import { createMinimalFile, createMultiElementFile } from '../../helpers/fixtures.js';
@@ -12,10 +12,10 @@ import { createMinimalFile, createMultiElementFile } from '../../helpers/fixture
 const PROJECT_ROOT = join(import.meta.dirname, '..', '..', '..');
 
 describe('edge cases and error handling', () => {
-  describe('exportImage routing', () => {
+  describe('convertImage routing', () => {
     it('should route to SVG when format is svg', async () => {
       const file = createMinimalFile();
-      const result = await exportImage(file, { format: 'svg' });
+      const result = await convertImage(file, { format: 'svg' });
 
       expect(typeof result).toBe('string');
       expect((result as string)).toContain('<svg');
@@ -23,7 +23,7 @@ describe('edge cases and error handling', () => {
 
     it('should route to PNG when format is png', async () => {
       const file = createMinimalFile();
-      const result = await exportImage(file, { format: 'png' });
+      const result = await convertImage(file, { format: 'png' });
 
       expect(Buffer.isBuffer(result)).toBe(true);
     }, 30000);
@@ -35,7 +35,7 @@ describe('edge cases and error handling', () => {
       const raw = readFileSync(examplePath, 'utf-8');
       const file: ExcalidrawFile = JSON.parse(raw);
 
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toContain('<svg');
       expect(svg).toContain('</svg>');
@@ -48,7 +48,7 @@ describe('edge cases and error handling', () => {
       const raw = readFileSync(examplePath, 'utf-8');
       const file: ExcalidrawFile = JSON.parse(raw);
 
-      const png = await exportToPNG(file);
+      const png = await convertToPNG(file);
 
       expect(Buffer.isBuffer(png)).toBe(true);
       expect(png.length).toBeGreaterThan(5000);
@@ -65,7 +65,7 @@ describe('edge cases and error handling', () => {
       const file = createMinimalFile();
       file.appState.viewBackgroundColor = '#aabbcc';
 
-      const svg = await exportToSVG(file, {
+      const svg = await convertToSVG(file, {
         viewBackgroundColor: '#112233',
       });
 
@@ -77,7 +77,7 @@ describe('edge cases and error handling', () => {
       const file = createMinimalFile();
       file.appState.viewBackgroundColor = '#aabbcc';
 
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toContain('#aabbcc');
     }, 30000);
@@ -86,7 +86,7 @@ describe('edge cases and error handling', () => {
   describe('combined options', () => {
     it('should handle all options set simultaneously for SVG', async () => {
       const file = createMultiElementFile();
-      const svg = await exportToSVG(file, {
+      const svg = await convertToSVG(file, {
         exportBackground: true,
         viewBackgroundColor: '#ff00ff',
         exportWithDarkMode: true,
@@ -99,7 +99,7 @@ describe('edge cases and error handling', () => {
 
     it('should handle all options set simultaneously for PNG', async () => {
       const file = createMultiElementFile();
-      const png = await exportToPNG(file, {
+      const png = await convertToPNG(file, {
         exportBackground: true,
         viewBackgroundColor: '#00ffff',
         exportWithDarkMode: false,
@@ -116,16 +116,16 @@ describe('edge cases and error handling', () => {
   describe('consistency checks', () => {
     it('should produce identical SVG for same input', async () => {
       const file = createMinimalFile();
-      const svg1 = await exportToSVG(file);
-      const svg2 = await exportToSVG(file);
+      const svg1 = await convertToSVG(file);
+      const svg2 = await convertToSVG(file);
 
       expect(svg1).toBe(svg2);
     }, 30000);
 
     it('should produce identical PNG for same input', async () => {
       const file = createMinimalFile();
-      const png1 = await exportToPNG(file);
-      const png2 = await exportToPNG(file);
+      const png1 = await convertToPNG(file);
+      const png2 = await convertToPNG(file);
 
       expect(png1.equals(png2)).toBe(true);
     }, 30000);
@@ -139,7 +139,7 @@ describe('edge cases and error handling', () => {
 
       // Should still produce valid output (possibly empty-ish)
       try {
-        const svg = await exportToSVG(file);
+        const svg = await convertToSVG(file);
         expect(svg).toContain('<svg');
       } catch {
         // Acceptable if @excalidraw/utils can't handle all-deleted elements
@@ -150,14 +150,14 @@ describe('edge cases and error handling', () => {
   describe('SVG structure validation', () => {
     it('should produce well-formed SVG with namespace', async () => {
       const file = createMinimalFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       expect(svg).toContain('xmlns');
     }, 30000);
 
     it('should contain rect/path elements for shapes', async () => {
       const file = createMultiElementFile();
-      const svg = await exportToSVG(file);
+      const svg = await convertToSVG(file);
 
       // The SVG should contain graphical elements
       const hasGraphics =
