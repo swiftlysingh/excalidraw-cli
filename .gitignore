@@ -33,7 +33,7 @@ coverage/
 test*.excalidraw
 test*.dsl
 
-# Examples directory
+# Private / local-only artifacts
 pvt/
 
 # IDE docs

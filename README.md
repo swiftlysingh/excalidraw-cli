@@ -88,7 +88,7 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 
 ### Bidirectional and Reverse Arrows
 
-```
+```text
 # System architecture with bidirectional communication
 [Client] <-> [API Gateway]
 [API Gateway] <-> [Auth Service]
@@ -222,8 +222,8 @@ excalidraw-cli create examples/dsl/leetcode.dsl -o output.excalidraw
 The generated `.excalidraw` files can be:
 
 1. Opened directly in [Excalidraw](https://excalidraw.com) (File > Open) or just copy paste the entire file.
-3. Imported into Obsidian with the Excalidraw plugin
-4. Used with any tool that supports the Excalidraw format
+2. Imported into Obsidian with the Excalidraw plugin
+3. Used with any tool that supports the Excalidraw format
 
 ## License
 

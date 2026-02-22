@@ -128,10 +128,8 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
     edges: [],
   };
 
-  // Build node map and ELK children in single pass
-  const nodeMap = new Map<string, GraphNode>();
-  elkGraph.children = graph.nodes.map((node) => {
-    nodeMap.set(node.id, node);
+  // Build  ELK children
+    elkGraph.children = graph.nodes.map((node) => {
     const dims = calculateNodeDimensions(node);
     return {
       id: node.id,
@@ -152,12 +150,18 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
   // Run ELK layout
   const layoutResult = await elk.layout(elkGraph);
 
+  // Build map from ELK result for O(1) lookups
+  const elkResultMap = new Map<string, ElkNode>();
+  for (const elkNode of layoutResult.children || []) {
+    elkResultMap.set(elkNode.id, elkNode);
+  }
+
   // Extract layouted nodes
   const layoutedNodes: LayoutedNode[] = [];
   const elkNodeMap = new Map<string, ElkNode>();
 
   for (const node of graph.nodes) {
-    const elkNode = layoutResult.children?.find((n: ElkNode) => n.id === node.id);
+    const elkNode = elkResultMap.get(node.id);
     if (elkNode) {
       const layoutedNode: LayoutedNode = {
         ...node,

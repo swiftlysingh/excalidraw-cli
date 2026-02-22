@@ -407,6 +407,35 @@ export function parseDSL(input: string): FlowchartGraph {
     return nodes.get(key)!;
   }
 
+  /**
+   * Build EdgeStyle from pending arrow state
+   */
+  function buildEdgeStyle(
+    dashed: boolean,
+    bidirectional: boolean,
+    reversed: boolean
+  ): EdgeStyle | undefined {
+    const edgeStyle: EdgeStyle = {};
+
+    if (dashed) {
+      edgeStyle.strokeStyle = 'dashed';
+    }
+
+    if (bidirectional) {
+      edgeStyle.startArrowhead = 'arrow';
+      edgeStyle.endArrowhead = 'arrow';
+    } else if (reversed) {
+      edgeStyle.startArrowhead = 'arrow';
+      edgeStyle.endArrowhead = null;
+    } else {
+      // Default: forward arrow
+      edgeStyle.startArrowhead = null;
+      edgeStyle.endArrowhead = 'arrow';
+    }
+
+    return Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined;
+  }
+
   let i = 0;
   let lastNode: GraphNode | null = null;
   let pendingLabel: string | null = null;
@@ -422,6 +451,8 @@ export function parseDSL(input: string): FlowchartGraph {
       lastNode = null;
       pendingLabel = null;
       pendingDashed = false;
+      pendingBidirectional = false;
+      pendingReversed = false;
       pendingArrow = false;
       i++;
       continue;
@@ -485,31 +516,12 @@ export function parseDSL(input: string): FlowchartGraph {
 
       // Only create edge if there was an explicit arrow token
       if (lastNode && pendingArrow) {
-        // Build EdgeStyle with arrowhead properties
-        const edgeStyle: EdgeStyle = {};
-
-        if (pendingDashed) {
-          edgeStyle.strokeStyle = 'dashed';
-        }
-
-        if (pendingBidirectional) {
-          edgeStyle.startArrowhead = 'arrow';
-          edgeStyle.endArrowhead = 'arrow';
-        } else if (pendingReversed) {
-          edgeStyle.startArrowhead = 'arrow';
-          edgeStyle.endArrowhead = null;
-        } else {
-          // Default: forward arrow
-          edgeStyle.startArrowhead = null;
-          edgeStyle.endArrowhead = 'arrow';
-        }
-
         edges.push({
           id: nanoid(10),
           source: lastNode.id,
           target: node.id,
           label: pendingLabel || undefined,
-          style: Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined,
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional, pendingReversed),
         });
         pendingLabel = null;
         pendingDashed = false;
@@ -543,31 +555,12 @@ export function parseDSL(input: string): FlowchartGraph {
 
       // Only create edge if there was an explicit arrow token
       if (lastNode && pendingArrow) {
-        // Build EdgeStyle with arrowhead properties
-        const edgeStyle: EdgeStyle = {};
-
-        if (pendingDashed) {
-          edgeStyle.strokeStyle = 'dashed';
-        }
-
-        if (pendingBidirectional) {
-          edgeStyle.startArrowhead = 'arrow';
-          edgeStyle.endArrowhead = 'arrow';
-        } else if (pendingReversed) {
-          edgeStyle.startArrowhead = 'arrow';
-          edgeStyle.endArrowhead = null;
-        } else {
-          // Default: forward arrow
-          edgeStyle.startArrowhead = null;
-          edgeStyle.endArrowhead = 'arrow';
-        }
-
         edges.push({
           id: nanoid(10),
           source: lastNode.id,
           target: node.id,
           label: pendingLabel || undefined,
-          style: Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined,
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional, pendingReversed),
         });
         pendingLabel = null;
         pendingDashed = false;

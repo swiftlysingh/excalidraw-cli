@@ -76,8 +76,8 @@ export function createArrow(
     lastCommittedPoint: null,
     startBinding: startBindingInfo.binding,
     endBinding: endBindingInfo.binding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: styleProps.startArrowhead === undefined ? null : styleProps.startArrowhead,
+    endArrowhead: styleProps.endArrowhead === undefined ? 'arrow' : styleProps.endArrowhead,
     elbowed: false,
   } as ExcalidrawArrow;
 }
@@ -121,8 +121,8 @@ export function createArrowWithBindings(
     lastCommittedPoint: null,
     startBinding,
     endBinding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: styleProps.startArrowhead === undefined ? null : styleProps.startArrowhead,
+    endArrowhead: styleProps.endArrowhead === undefined ? 'arrow' : styleProps.endArrowhead,
     elbowed: false,
   } as ExcalidrawArrow;
 }
