@@ -24,8 +24,9 @@ function mapEdgeStyle(style?: EdgeStyle): Partial<ExcalidrawArrow> {
     strokeWidth: style.strokeWidth,
     strokeStyle: style.strokeStyle,
     roughness: style.roughness,
-    startArrowhead: style.startArrowhead ?? null,
-    endArrowhead: style.endArrowhead ?? 'arrow',
+    // Use === undefined to allow explicit null values (needed for reverse arrows)
+    startArrowhead: style.startArrowhead === undefined ? null : style.startArrowhead,
+    endArrowhead: style.endArrowhead === undefined ? 'arrow' : style.endArrowhead,
   };
 }
 
@@ -75,8 +76,8 @@ export function createArrow(
     lastCommittedPoint: null,
     startBinding: startBindingInfo.binding,
     endBinding: endBindingInfo.binding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: styleProps.startArrowhead === undefined ? null : styleProps.startArrowhead,
+    endArrowhead: styleProps.endArrowhead === undefined ? 'arrow' : styleProps.endArrowhead,
     elbowed: false,
   } as ExcalidrawArrow;
 }
@@ -120,8 +121,8 @@ export function createArrowWithBindings(
     lastCommittedPoint: null,
     startBinding,
     endBinding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: styleProps.startArrowhead === undefined ? null : styleProps.startArrowhead,
+    endArrowhead: styleProps.endArrowhead === undefined ? 'arrow' : styleProps.endArrowhead,
     elbowed: false,
   } as ExcalidrawArrow;
 }

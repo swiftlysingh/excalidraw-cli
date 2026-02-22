@@ -28,3 +28,13 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Test output files
+test*.excalidraw
+test*.dsl
+
+# Private / local-only artifacts
+pvt/
+
+# IDE docs
+.kiro/
