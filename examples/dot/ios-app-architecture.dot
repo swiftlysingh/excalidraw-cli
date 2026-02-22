@@ -1,0 +1,21 @@
+digraph iOSArchitecture {
+  rankdir=LR;
+  
+  SwiftUIView [shape=box, label="SwiftUI View"];
+  ViewModel [shape=box, label="ViewModel"];
+  APIService [shape=box, label="API Service"];
+  CoreData [shape=box, label="Core Data"];
+  NetworkLayer [shape=box, label="Network Layer"];
+  BackendAPI [shape=box, label="Backend API"];
+  RemoteDatabase [shape=box, label="Remote Database"];
+  SyncManager [shape=box, label="Sync Manager"];
+  
+  SwiftUIView -> ViewModel;
+  ViewModel -> APIService;
+  ViewModel -> CoreData;
+  APIService -> NetworkLayer;
+  NetworkLayer -> BackendAPI;
+  BackendAPI -> RemoteDatabase;
+  CoreData -> SyncManager;
+  SyncManager -> RemoteDatabase [style=dashed];
+}

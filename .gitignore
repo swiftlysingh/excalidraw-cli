@@ -28,3 +28,13 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Test output files
+test*.excalidraw
+test*.dsl
+
+# Examples directory
+pvt/
+
+# IDE docs
+.kiro/

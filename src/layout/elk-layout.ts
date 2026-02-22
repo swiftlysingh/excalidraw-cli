@@ -111,7 +111,7 @@ function getElkDirection(direction: LayoutOptions['direction']): string {
 export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph> {
   const elk = new ELK();
 
-  // Build ELK graph
+  // Build ELK graph with flat structure
   const elkGraph: ElkGraph = {
     id: 'root',
     layoutOptions: {
@@ -124,47 +124,51 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
       'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
     },
-    children: graph.nodes.map((node) => {
-      const dims = calculateNodeDimensions(node);
-      return {
-        id: node.id,
-        width: dims.width,
-        height: dims.height,
-        labels: [{ text: node.label }],
-      };
-    }),
-    edges: graph.edges.map((edge) => ({
-      id: edge.id,
-      sources: [edge.source],
-      targets: [edge.target],
-      labels: edge.label ? [{ text: edge.label }] : undefined,
-    })),
+    children: [],
+    edges: [],
   };
+
+  // Build node map and ELK children in single pass
+  const nodeMap = new Map<string, GraphNode>();
+  elkGraph.children = graph.nodes.map((node) => {
+    nodeMap.set(node.id, node);
+    const dims = calculateNodeDimensions(node);
+    return {
+      id: node.id,
+      width: dims.width,
+      height: dims.height,
+      labels: [{ text: node.label }],
+    };
+  });
+
+  // Build ELK edges
+  elkGraph.edges = graph.edges.map((edge) => ({
+    id: edge.id,
+    sources: [edge.source],
+    targets: [edge.target],
+    labels: edge.label ? [{ text: edge.label }] : undefined,
+  }));
 
   // Run ELK layout
   const layoutResult = await elk.layout(elkGraph);
-
-  // Build node map for lookups
-  const nodeMap = new Map<string, GraphNode>();
-  for (const node of graph.nodes) {
-    nodeMap.set(node.id, node);
-  }
 
   // Extract layouted nodes
   const layoutedNodes: LayoutedNode[] = [];
   const elkNodeMap = new Map<string, ElkNode>();
 
-  for (const elkNode of layoutResult.children || []) {
-    elkNodeMap.set(elkNode.id, elkNode);
-    const originalNode = nodeMap.get(elkNode.id);
-    if (originalNode) {
-      layoutedNodes.push({
-        ...originalNode,
+  for (const node of graph.nodes) {
+    const elkNode = layoutResult.children?.find((n: ElkNode) => n.id === node.id);
+    if (elkNode) {
+      const layoutedNode: LayoutedNode = {
+        ...node,
         x: (elkNode.x || 0) + graph.options.padding,
         y: (elkNode.y || 0) + graph.options.padding,
         width: elkNode.width || 100,
         height: elkNode.height || 60,
-      });
+      };
+
+      layoutedNodes.push(layoutedNode);
+      elkNodeMap.set(node.id, elkNode);
     }
   }
 

@@ -24,7 +24,7 @@
 
 ## Installation
 
-### Using the npm
+### Using npm
 
 ```bash
 npm i @swiftlysingh/excalidraw-cli
@@ -70,8 +70,12 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 | `{Label}` | Diamond | Decisions, conditionals |
 | `(Label)` | Ellipse | Start/End points |
 | `[[Label]]` | Database | Data storage |
-| `->` | Arrow | Connection |
-| `-->` | Dashed Arrow | Dashed connection |
+| `->` | Forward Arrow | Connection (left to right) |
+| `<-` | Reverse Arrow | Connection (right to left) |
+| `<->` | Bidirectional Arrow | Two-way connection |
+| `-->` | Dashed Forward Arrow | Dashed connection |
+| `<--` | Dashed Reverse Arrow | Dashed reverse connection |
+| `<-->` | Dashed Bidirectional | Dashed two-way connection |
 | `-> "text" ->` | Labeled Arrow | Connection with label |
 
 ### Example DSL
@@ -82,14 +86,31 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 {Valid?} -> "no" -> [Show Error] -> [Enter Credentials]
 ```
 
+### Bidirectional and Reverse Arrows
+
+```
+# System architecture with bidirectional communication
+[Client] <-> [API Gateway]
+[API Gateway] <-> [Auth Service]
+[API Gateway] <-> [Data Service]
+[Data Service] -> [[Database]]
+
+# Reverse flow example
+[Output] <- [Transform] <- [Input]
+
+# Dashed bidirectional for optional connections
+[Service A] <--> [Service B]
+
+# Mixed arrow directions
+[User] -> [Frontend] <-> [Backend] <- [Admin]
+```
+
 ### Directives
 
 ```
 @direction LR    # Left to Right (default: TB)
 @spacing 60      # Node spacing in pixels
 ```
-
-## CLI Reference
 
 ### Commands
 
@@ -103,7 +124,7 @@ excalidraw-cli create [input] [options]
 
 **Options:**
 - `-o, --output <file>` - Output file path (default: flowchart.excalidraw)
-- `-f, --format <type>` - Input format: dsl, json (default: dsl)
+- `-f, --format <type>` - Input format: dsl, json, dot (default: dsl)
 - `--inline <dsl>` - Inline DSL string
 - `--stdin` - Read from stdin
 - `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
@@ -171,19 +192,38 @@ Here are some flowcharts created with excalidraw-cli:
 ### Simple Flow
 ![Simple Flow](assets/up.png)
 
+**Input:** [examples/dsl/up.dsl](examples/dsl/up.dsl) | [examples/dot/up.dot](examples/dot/up.dot)
+
+```bash
+excalidraw-cli create examples/dsl/up.dsl -o output.excalidraw
+```
+
 ### iOS App Architecture
 ![iOS App Architecture](assets/ios-app-architecture.png)
 
+**Input:** [examples/dsl/ios-app-architecture.dsl](examples/dsl/ios-app-architecture.dsl) | [examples/dot/ios-app-architecture.dot](examples/dot/ios-app-architecture.dot)
+
+```bash
+excalidraw-cli create examples/dsl/ios-app-architecture.dsl -o output.excalidraw
+```
+
 ### LeetCode Problem Solving Flow
 ![LeetCode Flow](assets/leetcode.png)
+
+**Input:** [examples/dsl/leetcode.dsl](examples/dsl/leetcode.dsl) | [examples/dot/leetcode.dot](examples/dot/leetcode.dot)
+
+```bash
+excalidraw-cli create examples/dsl/leetcode.dsl -o output.excalidraw
+```
+
 
 ## Output
 
 The generated `.excalidraw` files can be:
 
-1. Opened directly in [Excalidraw](https://excalidraw.com) (File > Open)
-2. Imported into Obsidian with the Excalidraw plugin
-3. Used with any tool that supports the Excalidraw format
+1. Opened directly in [Excalidraw](https://excalidraw.com) (File > Open) or just copy paste the entire file.
+3. Imported into Obsidian with the Excalidraw plugin
+4. Used with any tool that supports the Excalidraw format
 
 ## License
 

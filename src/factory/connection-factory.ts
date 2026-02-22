@@ -24,8 +24,9 @@ function mapEdgeStyle(style?: EdgeStyle): Partial<ExcalidrawArrow> {
     strokeWidth: style.strokeWidth,
     strokeStyle: style.strokeStyle,
     roughness: style.roughness,
-    startArrowhead: style.startArrowhead ?? null,
-    endArrowhead: style.endArrowhead ?? 'arrow',
+    // Use === undefined to allow explicit null values (needed for reverse arrows)
+    startArrowhead: style.startArrowhead === undefined ? null : style.startArrowhead,
+    endArrowhead: style.endArrowhead === undefined ? 'arrow' : style.endArrowhead,
   };
 }
 
