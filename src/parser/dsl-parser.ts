@@ -414,7 +414,7 @@ export function parseDSL(input: string): FlowchartGraph {
     dashed: boolean,
     bidirectional: boolean,
     reversed: boolean
-  ): EdgeStyle | undefined {
+  ): EdgeStyle {
     const edgeStyle: EdgeStyle = {};
 
     if (dashed) {
@@ -433,7 +433,7 @@ export function parseDSL(input: string): FlowchartGraph {
       edgeStyle.endArrowhead = 'arrow';
     }
 
-    return Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined;
+    return edgeStyle;
   }
 
   let i = 0;
@@ -516,12 +516,17 @@ export function parseDSL(input: string): FlowchartGraph {
 
       // Only create edge if there was an explicit arrow token
       if (lastNode && pendingArrow) {
+        // For reversed arrows, swap source/target so ELK sees logical flow direction
+        const edgeSource = pendingReversed ? node.id : lastNode.id;
+        const edgeTarget = pendingReversed ? lastNode.id : node.id;
+        
         edges.push({
           id: nanoid(10),
-          source: lastNode.id,
-          target: node.id,
+          source: edgeSource,
+          target: edgeTarget,
           label: pendingLabel || undefined,
-          style: buildEdgeStyle(pendingDashed, pendingBidirectional, pendingReversed),
+          // Pass reversed=false since we swapped source/target
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional, false),
         });
         pendingLabel = null;
         pendingDashed = false;
@@ -555,12 +560,17 @@ export function parseDSL(input: string): FlowchartGraph {
 
       // Only create edge if there was an explicit arrow token
       if (lastNode && pendingArrow) {
+        // For reversed arrows, swap source/target so ELK sees logical flow direction
+        const edgeSource = pendingReversed ? node.id : lastNode.id;
+        const edgeTarget = pendingReversed ? lastNode.id : node.id;
+        
         edges.push({
           id: nanoid(10),
-          source: lastNode.id,
-          target: node.id,
+          source: edgeSource,
+          target: edgeTarget,
           label: pendingLabel || undefined,
-          style: buildEdgeStyle(pendingDashed, pendingBidirectional, pendingReversed),
+          // Pass reversed=false since we swapped source/target
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional, false),
         });
         pendingLabel = null;
         pendingDashed = false;
