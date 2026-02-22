@@ -1,0 +1,10 @@
+digraph SimpleFlow {
+  rankdir=BT;
+  
+  Result [shape=ellipse, label="Result"];
+  Process [shape=box, label="Process"];
+  Input [shape=box, label="Input"];
+  
+  Result -> Process;
+  Process -> Input;
+}

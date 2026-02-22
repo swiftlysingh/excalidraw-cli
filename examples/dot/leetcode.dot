@@ -1,0 +1,46 @@
+digraph LeetCodeFlow {
+  rankdir=TB;
+  
+  StartProblem [shape=ellipse, label="Start Problem"];
+  ReadProblem [shape=box, label="Read Problem"];
+  AttemptSolution [shape=box, label="Attempt Solution"];
+  RunTests [shape=box, label="Run Tests"];
+  AllTestsPass [shape=diamond, label="All Tests Pass?"];
+  UnderstandError [shape=diamond, label="Understand Error?"];
+  ReviewApproach [shape=box, label="Review Approach"];
+  NeedHint [shape=diamond, label="Need Hint?"];
+  DebugStepByStep [shape=box, label="Debug Step by Step"];
+  CheckDiscussion [shape=box, label="Check Discussion"];
+  SubmitSolution [shape=box, label="Submit Solution"];
+  Accepted [shape=diamond, label="Accepted?"];
+  ReviewEdgeCases [shape=box, label="Review Edge Cases"];
+  FixBug [shape=box, label="Fix Bug"];
+  Success [shape=ellipse, label="Success!"];
+  
+  StartProblem -> ReadProblem;
+  ReadProblem -> AttemptSolution;
+  AttemptSolution -> RunTests;
+  RunTests -> AllTestsPass;
+  
+  AllTestsPass -> SubmitSolution [label="yes"];
+  AllTestsPass -> UnderstandError [label="no"];
+  
+  UnderstandError -> ReviewApproach [label="yes"];
+  UnderstandError -> NeedHint [label="no"];
+  
+  ReviewApproach -> NeedHint;
+  
+  NeedHint -> DebugStepByStep [label="yes"];
+  NeedHint -> CheckDiscussion [label="no"];
+  
+  DebugStepByStep -> AttemptSolution;
+  CheckDiscussion -> AttemptSolution;
+  
+  SubmitSolution -> Accepted;
+  
+  Accepted -> Success [label="yes"];
+  Accepted -> ReviewEdgeCases [label="no"];
+  
+  ReviewEdgeCases -> FixBug;
+  FixBug -> AttemptSolution;
+}

@@ -8,9 +8,13 @@
  *   [[Label]]      - Database
  *   ![path]        - Image element
  *   ![path](WxH)   - Image with dimensions
- *   A -> B         - Connection
+ *   A -> B         - Forward arrow
+ *   A <- B         - Reverse arrow
+ *   A <-> B        - Bidirectional arrow
+ *   A --> B        - Dashed forward arrow
+ *   A <-- B        - Dashed reverse arrow
+ *   A <--> B       - Dashed bidirectional arrow
  *   A -> "label" -> B  - Labeled connection
- *   A --> B        - Dashed connection
  *
  * Directives:
  *   @direction TB  - Set flow direction (TB, BT, LR, RL)
@@ -34,6 +38,7 @@ import type {
   ScatterConfig,
   DecorationAnchor,
   ImageSource,
+  EdgeStyle,
 } from '../types/dsl.js';
 import { DEFAULT_LAYOUT_OPTIONS } from '../types/dsl.js';
 
@@ -42,6 +47,9 @@ interface Token {
   value: string;
   nodeType?: NodeType;
   dashed?: boolean;
+  // Arrow direction properties
+  bidirectional?: boolean;
+  reversed?: boolean;
   // Image-specific properties
   imageSrc?: string;
   imageWidth?: number;
@@ -117,17 +125,20 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Directive (@direction, @spacing, @image, @decorate, @sticker, @library, @scatter)
+    // Check if @ is a directive
     if (input[i] === '@') {
+      // This is a directive: @direction, @spacing, etc.
       let directive = '';
       i++; // skip @
       while (i < len && /[a-zA-Z0-9]/.test(input[i])) {
         directive += input[i];
         i++;
       }
-      // Get directive value (stop at newline, comment, or another @)
+      // Get directive value
       while (i < len && (input[i] === ' ' || input[i] === '\t')) i++;
       let value = '';
+      
+      // For directives, stop at newline, comment, or another @
       while (i < len && input[i] !== '\n' && input[i] !== '#' && input[i] !== '@') {
         value += input[i];
         i++;
@@ -206,6 +217,57 @@ function tokenize(input: string): Token[] {
         i++;
       }
       tokens.push({ type: 'node', value: label.trim(), nodeType: 'ellipse' });
+      continue;
+    }
+
+    // Bidirectional dashed arrow <-->
+    if (
+      input[i] === '<' &&
+      input[i + 1] === '-' &&
+      input[i + 2] === '-' &&
+      input[i + 3] === '>'
+    ) {
+      tokens.push({
+        type: 'arrow',
+        value: '<-->',
+        dashed: true,
+        bidirectional: true,
+      });
+      i += 4;
+      continue;
+    }
+
+    // Bidirectional solid arrow <->
+    if (input[i] === '<' && input[i + 1] === '-' && input[i + 2] === '>') {
+      tokens.push({
+        type: 'arrow',
+        value: '<->',
+        bidirectional: true,
+      });
+      i += 3;
+      continue;
+    }
+
+    // Reverse dashed arrow <--
+    if (input[i] === '<' && input[i + 1] === '-' && input[i + 2] === '-') {
+      tokens.push({
+        type: 'arrow',
+        value: '<--',
+        dashed: true,
+        reversed: true,
+      });
+      i += 3;
+      continue;
+    }
+
+    // Reverse solid arrow <-
+    if (input[i] === '<' && input[i + 1] === '-') {
+      tokens.push({
+        type: 'arrow',
+        value: '<-',
+        reversed: true,
+      });
+      i += 2;
       continue;
     }
 
@@ -345,10 +407,35 @@ export function parseDSL(input: string): FlowchartGraph {
     return nodes.get(key)!;
   }
 
+  /**
+   * Build EdgeStyle from pending arrow state
+   */
+  function buildEdgeStyle(dashed: boolean, bidirectional: boolean): EdgeStyle | undefined {
+    const edgeStyle: EdgeStyle = {};
+
+    if (dashed) {
+      edgeStyle.strokeStyle = 'dashed';
+    }
+
+    if (bidirectional) {
+      edgeStyle.startArrowhead = 'arrow';
+      edgeStyle.endArrowhead = 'arrow';
+    } else {
+      // Default: forward arrow
+      edgeStyle.startArrowhead = null;
+      edgeStyle.endArrowhead = 'arrow';
+    }
+
+    return Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined;
+  }
+
   let i = 0;
   let lastNode: GraphNode | null = null;
   let pendingLabel: string | null = null;
   let pendingDashed = false;
+  let pendingBidirectional = false;
+  let pendingReversed = false;
+  let pendingArrow = false; // Track if an arrow token was seen
 
   while (i < tokens.length) {
     const token = tokens[i];
@@ -357,6 +444,9 @@ export function parseDSL(input: string): FlowchartGraph {
       lastNode = null;
       pendingLabel = null;
       pendingDashed = false;
+      pendingBidirectional = false;
+      pendingReversed = false;
+      pendingArrow = false;
       i++;
       continue;
     }
@@ -417,16 +507,24 @@ export function parseDSL(input: string): FlowchartGraph {
       };
       const node = getOrCreateNode(token.value, 'image', imageData);
 
-      if (lastNode) {
+      // Only create edge if there was an explicit arrow token
+      if (lastNode && pendingArrow) {
+        // For reversed arrows, swap source/target so ELK sees logical flow direction
+        const edgeSource = pendingReversed ? node.id : lastNode.id;
+        const edgeTarget = pendingReversed ? lastNode.id : node.id;
+        
         edges.push({
           id: nanoid(10),
-          source: lastNode.id,
-          target: node.id,
+          source: edgeSource,
+          target: edgeTarget,
           label: pendingLabel || undefined,
-          style: pendingDashed ? { strokeStyle: 'dashed' } : undefined,
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional),
         });
         pendingLabel = null;
         pendingDashed = false;
+        pendingBidirectional = false;
+        pendingReversed = false;
+        pendingArrow = false;
       }
 
       lastNode = node;
@@ -452,17 +550,24 @@ export function parseDSL(input: string): FlowchartGraph {
     if (token.type === 'node') {
       const node = getOrCreateNode(token.value, token.nodeType!);
 
-      if (lastNode) {
-        // Create edge from lastNode to this node
+      // Only create edge if there was an explicit arrow token
+      if (lastNode && pendingArrow) {
+        // For reversed arrows, swap source/target so ELK sees logical flow direction
+        const edgeSource = pendingReversed ? node.id : lastNode.id;
+        const edgeTarget = pendingReversed ? lastNode.id : node.id;
+        
         edges.push({
           id: nanoid(10),
-          source: lastNode.id,
-          target: node.id,
+          source: edgeSource,
+          target: edgeTarget,
           label: pendingLabel || undefined,
-          style: pendingDashed ? { strokeStyle: 'dashed' } : undefined,
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional),
         });
         pendingLabel = null;
         pendingDashed = false;
+        pendingBidirectional = false;
+        pendingReversed = false;
+        pendingArrow = false;
       }
 
       lastNode = node;
@@ -472,6 +577,9 @@ export function parseDSL(input: string): FlowchartGraph {
 
     if (token.type === 'arrow') {
       pendingDashed = token.dashed || false;
+      pendingBidirectional = token.bidirectional || false;
+      pendingReversed = token.reversed || false;
+      pendingArrow = true; // Mark that we saw an arrow
       i++;
       continue;
     }
