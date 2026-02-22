@@ -410,11 +410,7 @@ export function parseDSL(input: string): FlowchartGraph {
   /**
    * Build EdgeStyle from pending arrow state
    */
-  function buildEdgeStyle(
-    dashed: boolean,
-    bidirectional: boolean,
-    reversed: boolean
-  ): EdgeStyle {
+  function buildEdgeStyle(dashed: boolean, bidirectional: boolean): EdgeStyle | undefined {
     const edgeStyle: EdgeStyle = {};
 
     if (dashed) {
@@ -424,16 +420,13 @@ export function parseDSL(input: string): FlowchartGraph {
     if (bidirectional) {
       edgeStyle.startArrowhead = 'arrow';
       edgeStyle.endArrowhead = 'arrow';
-    } else if (reversed) {
-      edgeStyle.startArrowhead = 'arrow';
-      edgeStyle.endArrowhead = null;
     } else {
       // Default: forward arrow
       edgeStyle.startArrowhead = null;
       edgeStyle.endArrowhead = 'arrow';
     }
 
-    return edgeStyle;
+    return Object.keys(edgeStyle).length > 0 ? edgeStyle : undefined;
   }
 
   let i = 0;
@@ -525,8 +518,7 @@ export function parseDSL(input: string): FlowchartGraph {
           source: edgeSource,
           target: edgeTarget,
           label: pendingLabel || undefined,
-          // Pass reversed=false since we swapped source/target
-          style: buildEdgeStyle(pendingDashed, pendingBidirectional, false),
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional),
         });
         pendingLabel = null;
         pendingDashed = false;
@@ -569,8 +561,7 @@ export function parseDSL(input: string): FlowchartGraph {
           source: edgeSource,
           target: edgeTarget,
           label: pendingLabel || undefined,
-          // Pass reversed=false since we swapped source/target
-          style: buildEdgeStyle(pendingDashed, pendingBidirectional, false),
+          style: buildEdgeStyle(pendingDashed, pendingBidirectional),
         });
         pendingLabel = null;
         pendingDashed = false;
