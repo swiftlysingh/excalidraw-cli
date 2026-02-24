@@ -55,6 +55,9 @@ node dist/cli.js create --inline "[A] -> [B]" -o diagram.excalidraw
 # Inline DSL
 excalidraw-cli create --inline "(Start) -> [Process] -> {Decision?}" -o flow.excalidraw
 
+# With labeled edges
+excalidraw-cli create --inline "[Client] -> '/api/users' -> [Server]" -o api.excalidraw
+
 # From file
 excalidraw-cli create flowchart.dsl -o diagram.excalidraw
 
@@ -76,7 +79,7 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 | `-->` | Dashed Forward Arrow | Dashed connection |
 | `<--` | Dashed Reverse Arrow | Dashed reverse connection |
 | `<-->` | Dashed Bidirectional | Dashed two-way connection |
-| `-> "text" ->` | Labeled Arrow | Connection with label |
+| `-> "text" ->` | Labeled Arrow | Connection with label (use `"` or `'`) |
 
 ### Example DSL
 
@@ -85,6 +88,45 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 {Valid?} -> "yes" -> [Dashboard] -> (End)
 {Valid?} -> "no" -> [Show Error] -> [Enter Credentials]
 ```
+
+### Edge Labels and Quotes
+
+Edge labels support both single (`'`) and double (`"`) quotes:
+
+```text
+# API flow with endpoint labels
+[Client] -> '/api/users' -> [Backend]
+[Backend] -> "POST /auth/login" -> [Auth Service]
+
+# Decision labels
+{Authenticated?} -> 'yes' -> [Dashboard]
+{Authenticated?} -> 'no' -> [Login Page]
+```
+
+**Shell Escaping Tips:**
+
+When using `--inline`, choose your shell quotes wisely:
+
+```bash
+# Use single shell quotes + double DSL quotes (recommended)
+excalidraw-cli create --inline '[A] -> "label" -> [B]' -o out.excalidraw
+
+# Use double shell quotes + single DSL quotes (for labels with apostrophes)
+excalidraw-cli create --inline "[A] -> '/api/endpoint' -> [B]" -o out.excalidraw
+
+# Escape when mixing
+excalidraw-cli create --inline "[A] -> \"It's working\" -> [B]" -o out.excalidraw
+```
+
+**Special Characters:**
+
+Labels support special characters including:
+- Slashes: `/api/v1/users`
+- Query params: `GET /users?id=123`
+- Unicode: `→ next step`
+- Spaces and tabs
+
+**Note:** Backslashes need escaping (`\\`) and labels cannot span multiple lines.
 
 ### Bidirectional and Reverse Arrows
 

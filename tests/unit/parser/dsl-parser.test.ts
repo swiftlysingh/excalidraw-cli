@@ -58,6 +58,89 @@ describe('DSL Parser', () => {
     });
   });
 
+  describe('quote handling', () => {
+    it('should parse single-quoted labels', () => {
+      const result = parseDSL("[A] -> 'label' -> [B]");
+      expect(result.edges).toHaveLength(1);
+      expect(result.edges[0].label).toBe('label');
+    });
+
+    it('should parse double-quoted labels', () => {
+      const result = parseDSL('[A] -> "label" -> [B]');
+      expect(result.edges).toHaveLength(1);
+      expect(result.edges[0].label).toBe('label');
+    });
+
+    it('should handle single quote inside double quotes', () => {
+      const result = parseDSL('[A] -> "It\'s working" -> [B]');
+      expect(result.edges[0].label).toBe("It's working");
+    });
+
+    it('should handle double quote inside single quotes', () => {
+      const result = parseDSL("[A] -> 'He said \"yes\"' -> [B]");
+      expect(result.edges[0].label).toBe('He said "yes"');
+    });
+
+    it('should handle escaped single quotes', () => {
+      const result = parseDSL("[A] -> 'It\\'s working' -> [B]");
+      expect(result.edges[0].label).toBe("It's working");
+    });
+
+    it('should handle escaped double quotes', () => {
+      const result = parseDSL('[A] -> "She said \\"yes\\"" -> [B]');
+      expect(result.edges[0].label).toBe('She said "yes"');
+    });
+
+    it('should handle special characters in labels', () => {
+      const result = parseDSL("[A] -> '/api/v1/users' -> [B]");
+      expect(result.edges[0].label).toBe('/api/v1/users');
+    });
+
+    it('should handle query parameters in labels', () => {
+      const result = parseDSL('[A] -> "GET /users?id=123" -> [B]');
+      expect(result.edges[0].label).toBe('GET /users?id=123');
+    });
+
+    it('should handle unicode in labels', () => {
+      const result = parseDSL('[A] -> "→ next" -> [B]');
+      expect(result.edges[0].label).toBe('→ next');
+    });
+
+    it('should handle whitespace in labels', () => {
+      const result = parseDSL('[A] -> "  spaced  " -> [B]');
+      expect(result.edges[0].label).toBe('  spaced  ');
+    });
+
+    it('should handle tabs in labels', () => {
+      const result = parseDSL('[A] -> "tab\there" -> [B]');
+      expect(result.edges[0].label).toBe('tab\there');
+    });
+
+    it('should handle empty labels as no label', () => {
+      const result = parseDSL('[A] -> "" -> [B]');
+      expect(result.edges[0].label).toBeUndefined();
+    });
+
+    it('should work with all arrow types', () => {
+      const dashed = parseDSL("[A] --> 'dashed' --> [B]");
+      expect(dashed.edges[0].label).toBe('dashed');
+      expect(dashed.edges[0].style?.strokeStyle).toBe('dashed');
+
+      const bidir = parseDSL("[A] <-> 'bidir' <-> [B]");
+      expect(bidir.edges[0].label).toBe('bidir');
+      expect(bidir.edges[0].style?.startArrowhead).toBe('arrow');
+      expect(bidir.edges[0].style?.endArrowhead).toBe('arrow');
+    });
+
+    it('should work with all node types', () => {
+      const diamond = parseDSL("{Decision?} -> 'yes' -> [Action]");
+      expect(diamond.edges[0].label).toBe('yes');
+
+      const ellipse = parseDSL("(Start) -> 'begin' -> [Process]");
+      expect(ellipse.edges[0].label).toBe('begin');
+    });
+  });
+
   describe('directive parsing', () => {
     it('should parse direction directive', () => {
       const result = parseDSL('@direction LR\n[A] -> [B]');

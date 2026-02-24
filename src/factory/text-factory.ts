@@ -125,7 +125,10 @@ export function createBoundText(
 /**
  * Create a text label for a node (centered inside the shape)
  */
-export function createNodeLabel(node: LayoutedNode, options?: { fontSize?: number }): ExcalidrawText {
+export function createNodeLabel(
+  node: LayoutedNode,
+  options?: { fontSize?: number }
+): ExcalidrawText {
   const fontSize = options?.fontSize ?? DEFAULT_FONT_SIZE;
   const dims = calculateTextDimensions(node.label, fontSize);
 

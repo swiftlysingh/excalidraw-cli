@@ -16,7 +16,13 @@
  *   - Color attributes (fillcolor, color)
  */
 
-import { fromDot, type RootGraphModel, type NodeModel, type EdgeModel, type SubgraphModel } from 'ts-graphviz';
+import {
+  fromDot,
+  type RootGraphModel,
+  type NodeModel,
+  type EdgeModel,
+  type SubgraphModel,
+} from 'ts-graphviz';
 import { nanoid } from 'nanoid';
 import type {
   FlowchartGraph,
@@ -154,7 +160,11 @@ function getNodeIdFromTarget(target: unknown): string | null {
   if (!target) return null;
 
   // Handle NodeModel or ForwardRefNode (both have id property)
-  if (typeof target === 'object' && 'id' in target && typeof (target as { id: unknown }).id === 'string') {
+  if (
+    typeof target === 'object' &&
+    'id' in target &&
+    typeof (target as { id: unknown }).id === 'string'
+  ) {
     return (target as { id: string }).id;
   }
 

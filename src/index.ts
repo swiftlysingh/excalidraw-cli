@@ -63,7 +63,9 @@ export async function createFlowchartFromDSL(dsl: string): Promise<string> {
 /**
  * High-level API: Create an Excalidraw flowchart from JSON input
  */
-export async function createFlowchartFromJSON(input: import('./types/dsl.js').FlowchartInput): Promise<string> {
+export async function createFlowchartFromJSON(
+  input: import('./types/dsl.js').FlowchartInput
+): Promise<string> {
   const graph = (await import('./parser/json-parser.js')).parseJSON(input);
   const layoutedGraph = await (await import('./layout/elk-layout.js')).layoutGraph(graph);
   const excalidrawFile = (await import('./generator/excalidraw-generator.js')).generateExcalidraw(

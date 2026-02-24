@@ -14,7 +14,7 @@
  *   A --> B        - Dashed forward arrow
  *   A <-- B        - Dashed reverse arrow
  *   A <--> B       - Dashed bidirectional arrow
- *   A -> "label" -> B  - Labeled connection
+ *   A -> "label" -> B  - Labeled connection (single or double quotes)
  *
  * Directives:
  *   @direction TB  - Set flow direction (TB, BT, LR, RL)
@@ -137,7 +137,7 @@ function tokenize(input: string): Token[] {
       // Get directive value
       while (i < len && (input[i] === ' ' || input[i] === '\t')) i++;
       let value = '';
-      
+
       // For directives, stop at newline, comment, or another @
       while (i < len && input[i] !== '\n' && input[i] !== '#' && input[i] !== '@') {
         value += input[i];
@@ -221,12 +221,7 @@ function tokenize(input: string): Token[] {
     }
 
     // Bidirectional dashed arrow <-->
-    if (
-      input[i] === '<' &&
-      input[i + 1] === '-' &&
-      input[i + 2] === '-' &&
-      input[i + 3] === '>'
-    ) {
+    if (input[i] === '<' && input[i + 1] === '-' && input[i + 2] === '-' && input[i + 3] === '>') {
       tokens.push({
         type: 'arrow',
         value: '<-->',
@@ -285,11 +280,12 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Quoted label "text"
-    if (input[i] === '"') {
+    // Quoted label "text" or 'text'
+    if (input[i] === '"' || input[i] === "'") {
+      const quoteChar = input[i];
       i++;
       let label = '';
-      while (i < len && input[i] !== '"') {
+      while (i < len && input[i] !== quoteChar) {
         if (input[i] === '\\' && i + 1 < len) {
           i++;
           label += input[i];
@@ -298,7 +294,7 @@ function tokenize(input: string): Token[] {
         }
         i++;
       }
-      i++; // skip closing "
+      i++; // skip closing quote
       tokens.push({ type: 'label', value: label });
       continue;
     }
@@ -386,11 +382,7 @@ export function parseDSL(input: string): FlowchartGraph {
   let library: string | undefined;
 
   // Helper to get or create node by label
-  function getOrCreateNode(
-    label: string,
-    type: NodeType,
-    imageData?: ImageSource
-  ): GraphNode {
+  function getOrCreateNode(label: string, type: NodeType, imageData?: ImageSource): GraphNode {
     // Use label as key for deduplication
     const key = `${type}:${label}`;
     if (!nodes.has(key)) {
@@ -512,7 +504,7 @@ export function parseDSL(input: string): FlowchartGraph {
         // For reversed arrows, swap source/target so ELK sees logical flow direction
         const edgeSource = pendingReversed ? node.id : lastNode.id;
         const edgeTarget = pendingReversed ? lastNode.id : node.id;
-        
+
         edges.push({
           id: nanoid(10),
           source: edgeSource,
@@ -555,7 +547,7 @@ export function parseDSL(input: string): FlowchartGraph {
         // For reversed arrows, swap source/target so ELK sees logical flow direction
         const edgeSource = pendingReversed ? node.id : lastNode.id;
         const edgeTarget = pendingReversed ? lastNode.id : node.id;
-        
+
         edges.push({
           id: nanoid(10),
           source: edgeSource,

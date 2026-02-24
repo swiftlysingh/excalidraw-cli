@@ -138,10 +138,7 @@ export function createFileData(
 /**
  * Create an image element for a layouted node
  */
-export function createImageElement(
-  node: LayoutedNode,
-  fileId: string
-): ExcalidrawImage {
+export function createImageElement(node: LayoutedNode, fileId: string): ExcalidrawImage {
   return {
     ...createBaseElement('image', node.x, node.y, node.width, node.height, {
       id: node.id,
