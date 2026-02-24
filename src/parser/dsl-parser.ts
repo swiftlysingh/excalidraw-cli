@@ -286,6 +286,10 @@ function tokenize(input: string): Token[] {
       i++;
       let label = '';
       while (i < len && input[i] !== quoteChar) {
+        // Stop scanning if we hit a newline
+        if (input[i] === '\n') {
+          break;
+        }
         if (input[i] === '\\' && i + 1 < len) {
           i++;
           label += input[i];
@@ -294,7 +298,10 @@ function tokenize(input: string): Token[] {
         }
         i++;
       }
-      i++; // skip closing quote
+      // Skip closing quote if present (not newline or end of input)
+      if (i < len && input[i] === quoteChar) {
+        i++;
+      }
       tokens.push({ type: 'label', value: label });
       continue;
     }
@@ -568,10 +575,14 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     if (token.type === 'arrow') {
-      pendingDashed = token.dashed || false;
-      pendingBidirectional = token.bidirectional || false;
-      pendingReversed = token.reversed || false;
-      pendingArrow = true; // Mark that we saw an arrow
+      // Only process arrow if we have a source node
+      if (lastNode) {
+        pendingDashed = token.dashed || false;
+        pendingBidirectional = token.bidirectional || false;
+        pendingReversed = token.reversed || false;
+        pendingArrow = true; // Mark that we saw an arrow
+      }
+      // Skip/consume the arrow token regardless
       i++;
       continue;
     }

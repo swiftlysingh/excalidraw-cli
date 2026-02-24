@@ -173,6 +173,19 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
 
       layoutedNodes.push(layoutedNode);
       elkNodeMap.set(node.id, elkNode);
+    } else {
+      // Defensive fallback: node missing from ELK result
+      console.warn(`Node ${node.id} missing from ELK layout result, using fallback positioning`);
+      const padding = graph.options.padding || 0;
+      const layoutedNode: LayoutedNode = {
+        ...node,
+        x: padding,
+        y: padding,
+        width: 100,
+        height: 60,
+      };
+      layoutedNodes.push(layoutedNode);
+      // Do not set elkNodeMap for missing entries to avoid downstream undefined assumptions
     }
   }
 
