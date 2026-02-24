@@ -129,7 +129,7 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
   };
 
   // Build  ELK children
-    elkGraph.children = graph.nodes.map((node) => {
+  elkGraph.children = graph.nodes.map((node) => {
     const dims = calculateNodeDimensions(node);
     return {
       id: node.id,

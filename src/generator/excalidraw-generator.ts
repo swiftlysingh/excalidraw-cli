@@ -211,7 +211,9 @@ export function generateExcalidraw(graph: LayoutedGraph): ExcalidrawFile {
     }
 
     // Create arrow with bound text if it has a label
-    const boundElements = edge.label ? [{ id: `text-${edge.id}`, type: 'text' as const }] : undefined;
+    const boundElements = edge.label
+      ? [{ id: `text-${edge.id}`, type: 'text' as const }]
+      : undefined;
     const arrowElement = createArrow(edge, sourceNode, targetNode, boundElements);
     elements.push(arrowElement);
 
