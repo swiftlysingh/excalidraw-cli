@@ -2,7 +2,7 @@
  * Layout module exports
  */
 
-export { layoutGraph } from './elk-layout.js';
+export { layoutGraph, getAnchorOffset } from './elk-layout.js';
 export {
   calculateBindingPoint,
   calculateStartBinding,

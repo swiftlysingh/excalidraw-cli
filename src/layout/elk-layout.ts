@@ -267,7 +267,7 @@ export async function layoutGraph(graph: FlowchartGraph): Promise<LayoutedGraph>
 /**
  * Calculate position offset for decoration anchor
  */
-function getAnchorOffset(
+export function getAnchorOffset(
   anchor: DecorationAnchor | undefined,
   nodeWidth: number,
   nodeHeight: number,

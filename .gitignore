@@ -28,3 +28,4 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+tests/tmp/

@@ -159,7 +159,7 @@ export function createEdgeLabel(
   startX: number,
   startY: number,
   arrowId: string,
-  options?: { fontSize?: number }
+  options?: { fontSize?: number; id?: string }
 ): ExcalidrawText {
   const fontSize = options?.fontSize ?? DEFAULT_FONT_SIZE;
   const dims = calculateTextDimensions(label, fontSize);
@@ -188,6 +188,7 @@ export function createEdgeLabel(
 
   return {
     ...createBaseElement('text', x, y, dims.width, dims.height, {
+      id: options?.id,
       roundness: null,
     }),
     type: 'text',
