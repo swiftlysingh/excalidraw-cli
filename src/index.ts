@@ -45,7 +45,7 @@ export { generateExcalidraw, serializeExcalidraw } from './generator/excalidraw-
 export { createNode, createArrow, createText } from './factory/index.js';
 
 // Exporter exports
-export { convertToSVG, convertToPNG, convertImage, swapExtension } from './exporter/index.js';
+export { convertToSVG, convertToPNG, convertImage, swapExtension, DEFAULT_EXPORT_OPTIONS } from './exporter/index.js';
 export type { ExportOptions } from './exporter/index.js';
 
 // Default options
