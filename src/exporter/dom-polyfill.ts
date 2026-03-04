@@ -20,6 +20,7 @@ import { resolve, dirname } from 'node:path';
 const FONT_PROXY_BASE = 'https://excalidraw-fonts.local/';
 
 let polyfillApplied = false;
+let polyfillInitPromise: Promise<void> | null = null;
 
 /**
  * Resolve the absolute path to the `@excalidraw/utils` bundled font
@@ -40,7 +41,8 @@ function getAssetsDir(): string {
  * Initialise the minimal browser-like environment that @excalidraw/utils
  * requires to render SVGs in Node.js.
  *
- * This is idempotent — calling it more than once is a no-op.
+ * This is concurrency-safe and idempotent — concurrent callers share the
+ * same init promise, and subsequent calls after init are a no-op.
  *
  * What gets polyfilled:
  * - Core DOM globals via jsdom (`window`, `document`, `navigator`, etc.)
@@ -54,7 +56,18 @@ function getAssetsDir(): string {
  */
 export async function ensureDOMPolyfill(): Promise<void> {
   if (polyfillApplied) return;
+  if (polyfillInitPromise) return polyfillInitPromise;
 
+  polyfillInitPromise = performPolyfillInit();
+
+  try {
+    await polyfillInitPromise;
+  } finally {
+    polyfillInitPromise = null;
+  }
+}
+
+async function performPolyfillInit(): Promise<void> {
   const { JSDOM } = await import('jsdom');
   const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
     url: 'https://localhost',
