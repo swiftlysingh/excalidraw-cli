@@ -6,7 +6,7 @@
  */
 
 import { createRequire } from 'node:module';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, parse, format } from 'node:path';
 import { ensureDOMPolyfill } from './dom-polyfill.js';
 import type { ExcalidrawFile } from '../types/excalidraw.js';
 
@@ -254,7 +254,6 @@ export async function convertImage(
  * swapExtension('/tmp/out.json', 'svg')       // → '/tmp/out.svg'
  */
 export function swapExtension(filePath: string, newExt: string): string {
-  const lastDot = filePath.lastIndexOf('.');
-  const base = lastDot > 0 ? filePath.substring(0, lastDot) : filePath;
-  return `${base}.${newExt}`;
+  const parsed = parse(filePath);
+  return format({ ...parsed, base: undefined, ext: `.${newExt}` });
 }

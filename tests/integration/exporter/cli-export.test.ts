@@ -9,10 +9,12 @@
 import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { execFileSync } from 'child_process';
 import { readFileSync, existsSync, unlinkSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { createMinimalFile } from '../../helpers/fixtures.js';
 
-const PROJECT_ROOT = join(import.meta.dirname, '..', '..', '..');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = join(__dirname, '..', '..', '..');
 const CLI_PATH = join(PROJECT_ROOT, 'dist', 'cli.js');
 const TMP_DIR = join(PROJECT_ROOT, 'tests', 'tmp');
 

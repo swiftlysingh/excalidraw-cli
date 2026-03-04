@@ -7,7 +7,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import {
   convertToSVG,
   convertToPNG,
@@ -16,7 +17,8 @@ import {
 import type { ExcalidrawFile } from '../../../src/types/excalidraw.js';
 import { createMinimalFile, createMultiElementFile } from '../../helpers/fixtures.js';
 
-const PROJECT_ROOT = join(import.meta.dirname, '..', '..', '..');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = join(__dirname, '..', '..', '..');
 
 describe('edge cases and error handling', () => {
   describe('convertImage routing', () => {

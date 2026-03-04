@@ -53,13 +53,23 @@ describe('swapExtension', () => {
       expect(swapExtension('./v1.2/output.excalidraw', 'png')).toBe('./v1.2/output.png');
     });
 
+    it('should handle extension-less files in directories with dots', () => {
+      expect(swapExtension('./v1.2/output', 'png')).toBe('./v1.2/output.png');
+    });
+
+    it('should handle dotted directory with extension-less file', () => {
+      expect(swapExtension('path.to/file', 'svg')).toBe('path.to/file.svg');
+    });
+
+    it('should handle deeply nested dotted directories', () => {
+      expect(swapExtension('src/v2.0/diagram', 'svg')).toBe('src/v2.0/diagram.svg');
+    });
+
     it('should handle filenames with no extension', () => {
-      // lastDot is -1, base = filePath
       expect(swapExtension('noextension', 'svg')).toBe('noextension.svg');
     });
 
     it('should handle dotfiles (dot at position 0)', () => {
-      // lastDot is 0, condition `lastDot > 0` is false, so base = filePath
       expect(swapExtension('.gitignore', 'svg')).toBe('.gitignore.svg');
     });
   });

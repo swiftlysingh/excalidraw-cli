@@ -4,11 +4,12 @@
 
 ### Why the prerelease tag?
 
-Despite its prerelease-looking version string, **`0.1.3-test32` is the npm
-`latest` dist-tag** — running `npm install @excalidraw/utils` installs this
-exact version. The Excalidraw team has been iterating on a full rewrite of the
-utils package through the `0.1.3-test*` series and has promoted `test32` as the
-current recommended release.
+Despite its prerelease-looking version string, **`0.1.3-test32` was the npm
+`latest` dist-tag as of January 2025** — running `npm install @excalidraw/utils`
+installed this exact version at that time. The Excalidraw team has been iterating
+on a full rewrite of the utils package through the `0.1.3-test*` series and had
+promoted `test32` as the recommended release. Before upgrading, verify the
+current `latest` dist-tag with `npm view @excalidraw/utils dist-tags`.
 
 ### Why can't we use the stable `0.1.2`?
 
