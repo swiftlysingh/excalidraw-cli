@@ -2,23 +2,16 @@
  * Image Exporter
  *
  * Exports Excalidraw files to SVG and PNG image formats.
- * Uses @excalidraw/utils for SVG rendering and @resvg/resvg-js for PNG rasterization.
+ * Keeps `@excalidraw/utils` because it is still required for:
+ * - `exportToSvg()` during SVG generation
+ * - bundled font assets used by server-side SVG/PNG text rendering
+ *
+ * PNG export rasterizes the generated SVG with `@resvg/resvg-js`.
  */
 
-import { createRequire } from 'node:module';
-import { resolve, dirname, parse, format } from 'node:path';
-import { ensureDOMPolyfill } from './dom-polyfill.js';
+import { parse, format } from 'node:path';
+import { withDOMPolyfill, getExcalidrawAssetDir } from './dom-polyfill.js';
 import type { ExcalidrawFile } from '../types/excalidraw.js';
-
-/** Native `console.error` captured at module load for safe restoration. */
-const NATIVE_CONSOLE_ERROR = console.error;
-
-/**
- * Reference counter for concurrent console.error suppression.
- * Only restores the native implementation when all active
- * suppressions have completed (counter drops to zero).
- */
-let suppressionDepth = 0;
 
 /**
  * Export options matching Excalidraw website capabilities
@@ -102,51 +95,7 @@ export async function convertToSVG(
   options?: Partial<ExportOptions>
 ): Promise<string> {
   const opts = resolveOptions(file, { format: 'svg', ...options });
-
-  // Ensure DOM polyfills are applied before importing @excalidraw/utils
-  await ensureDOMPolyfill();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const utils = await import('@excalidraw/utils') as any;
-  const exportToSvg = utils.exportToSvg as (opts: {
-    elements: unknown[];
-    appState: Record<string, unknown>;
-    files: Record<string, unknown> | null;
-    exportPadding?: number;
-  }) => Promise<{ outerHTML: string }>;
-
-  const appState = {
-    ...file.appState,
-    exportBackground: opts.exportBackground,
-    viewBackgroundColor: opts.viewBackgroundColor,
-    exportWithDarkMode: opts.dark,
-    exportEmbedScene: opts.exportEmbedScene,
-  };
-
-  suppressionDepth++;
-  if (suppressionDepth === 1) {
-    console.error = (...args: unknown[]) => {
-      const msg = String(args[0] || '');
-      if (msg.includes('font-face') || msg.includes('Path2D')) return;
-      NATIVE_CONSOLE_ERROR.apply(console, args);
-    };
-  }
-
-  try {
-    const svg = await exportToSvg({
-      elements: file.elements as unknown[],
-      appState: appState as Record<string, unknown>,
-      files: (file.files || {}) as Record<string, unknown>,
-      exportPadding: opts.padding,
-    });
-
-    return svg.outerHTML;
-  } finally {
-    suppressionDepth--;
-    if (suppressionDepth === 0) {
-      console.error = NATIVE_CONSOLE_ERROR;
-    }
-  }
+  return withExporterRuntime(() => renderSvg(file, opts));
 }
 
 /**
@@ -158,15 +107,8 @@ export async function convertToSVG(
  *
  * @returns Absolute path to the assets directory.
  */
-let cachedFontDir: string | null = null;
 function getExcalidrawFontDir(): string {
-  if (cachedFontDir) return cachedFontDir;
-
-  const require = createRequire(import.meta.url);
-  const utilsEntry = require.resolve('@excalidraw/utils');
-  cachedFontDir = resolve(dirname(utilsEntry), 'assets');
-
-  return cachedFontDir;
+  return getExcalidrawAssetDir();
 }
 
 /**
@@ -187,46 +129,41 @@ export async function convertToPNG(
   options?: Partial<ExportOptions>
 ): Promise<Buffer> {
   const opts = resolveOptions(file, { format: 'png', ...options });
+  return withExporterRuntime(async () => {
+    const svgString = await renderSvg(file, opts);
+    const { Resvg } = await import('@resvg/resvg-js');
 
-  // First generate SVG
-  const svgString = await convertToSVG(file, opts);
+    const widthMatch = svgString.match(/width="([^"]+)"/);
+    const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
 
-  // Use @resvg/resvg-js to convert SVG → PNG
-  const { Resvg } = await import('@resvg/resvg-js');
+    const scale =
+      typeof opts.scale === 'number' && Number.isFinite(opts.scale)
+        ? opts.scale
+        : 1;
+    const safeScale = Math.min(Math.max(scale, 0.1), 10);
+    const scaledWidth = Math.max(1, Math.round(naturalWidth * safeScale));
 
-  // Parse the SVG to get its natural width for scaling
-  const widthMatch = svgString.match(/width="([^"]+)"/);
-  const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
+    // resvg-js does not parse @font-face declarations from the SVG, so we
+    // still need the packaged Excalidraw font files to keep text rendering sane.
+    const fontDir = getExcalidrawFontDir();
 
-  // Sanitize scale to avoid zero, negative, non-finite, or extreme values.
-  const scale =
-    typeof opts.scale === 'number' && Number.isFinite(opts.scale)
-      ? opts.scale
-      : 1;
-  const safeScale = Math.min(Math.max(scale, 0.1), 10);
-  const scaledWidth = Math.max(1, Math.round(naturalWidth * safeScale));
+    const resvg = new Resvg(svgString, {
+      fitTo: {
+        mode: 'width' as const,
+        value: scaledWidth,
+      },
+      background: opts.exportBackground ? opts.viewBackgroundColor : undefined,
+      font: {
+        loadSystemFonts: false,
+        fontDirs: [fontDir],
+      },
+    });
 
-  // Load Excalidraw font files for text rendering.
-  // resvg-js does NOT parse @font-face CSS from SVG — fonts must be
-  // provided via fontDirs for text to render correctly.
-  const fontDir = getExcalidrawFontDir();
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
 
-  const resvg = new Resvg(svgString, {
-    fitTo: {
-      mode: 'width' as const,
-      value: scaledWidth,
-    },
-    background: opts.exportBackground ? opts.viewBackgroundColor : undefined,
-    font: {
-      loadSystemFonts: false,
-      fontDirs: [fontDir],
-    },
+    return Buffer.from(pngBuffer);
   });
-
-  const pngData = resvg.render();
-  const pngBuffer = pngData.asPng();
-
-  return Buffer.from(pngBuffer);
 }
 
 /**
@@ -266,4 +203,52 @@ export async function convertImage(
 export function swapExtension(filePath: string, newExt: string): string {
   const parsed = parse(filePath);
   return format({ ...parsed, base: undefined, ext: `.${newExt}` });
+}
+
+async function withExporterRuntime<T>(callback: () => Promise<T>): Promise<T> {
+  return withDOMPolyfill(async () => {
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      const msg = String(args[0] || '');
+      if (msg.includes('font-face') || msg.includes('Path2D')) return;
+      originalConsoleError.apply(console, args);
+    };
+
+    try {
+      return await callback();
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
+}
+
+async function renderSvg(
+  file: ExcalidrawFile,
+  opts: Required<ExportOptions>
+): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const utils = await import('@excalidraw/utils') as any;
+  const exportToSvg = utils.exportToSvg as (opts: {
+    elements: unknown[];
+    appState: Record<string, unknown>;
+    files: Record<string, unknown> | null;
+    exportPadding?: number;
+  }) => Promise<{ outerHTML: string }>;
+
+  const appState = {
+    ...file.appState,
+    exportBackground: opts.exportBackground,
+    viewBackgroundColor: opts.viewBackgroundColor,
+    exportWithDarkMode: opts.dark,
+    exportEmbedScene: opts.exportEmbedScene,
+  };
+
+  const svg = await exportToSvg({
+    elements: file.elements as unknown[],
+    appState: appState as Record<string, unknown>,
+    files: (file.files || {}) as Record<string, unknown>,
+    exportPadding: opts.padding,
+  });
+
+  return svg.outerHTML;
 }

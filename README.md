@@ -26,6 +26,10 @@
 
 ## Installation
 
+Requires `Node >=20.19.0`.
+
+This exporter change drops Node 18 support and should be released as the next major version.
+
 ### Using npm
 
 ```bash
@@ -223,6 +227,8 @@ const png = await convertToPNG(file, {
 });
 writeFileSync('diagram.png', png);
 ```
+
+`@excalidraw/utils` remains a required runtime dependency for image export. The CLI uses its `exportToSvg()` implementation for SVG generation, and reuses the bundled Excalidraw font assets so server-side PNG rendering keeps text output close to the browser version.
 
 ## Examples
 

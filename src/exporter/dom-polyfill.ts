@@ -1,98 +1,88 @@
 /**
- * DOM Polyfill for Node.js
+ * DOM polyfill utilities for image export.
  *
- * Sets up the minimum browser globals required by @excalidraw/utils
- * to render SVGs in a Node.js environment using jsdom.
- *
- * Key features:
- * - jsdom for core DOM (document, window, DOMParser, etc.)
- * - Path2D stub for roughjs shape generation
- * - FontFace polyfill that works with @excalidraw/utils font loading
- * - document.fonts (FontFaceSet) polyfill for font registration
- * - fetch() override to load font files from disk via file:// URLs
- * - EXCALIDRAW_ASSET_PATH pointing to bundled font assets
+ * `@excalidraw/utils.exportToSvg()` expects a browser-ish environment even when
+ * running in Node. We provide that environment only for the duration of an
+ * export so host globals such as `window`, `document`, `navigator`, and `fetch`
+ * are restored afterwards.
  */
 
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
-/** Fake base URL used to route font fetches through our local file override */
+
+/** Fake base URL used to route bundled font requests through the file loader. */
 const FONT_PROXY_BASE = 'https://excalidraw-fonts.local/';
 
-let polyfillApplied = false;
-let polyfillInitPromise: Promise<void> | null = null;
+let cachedAssetsDir: string | null = null;
+let exportScopeQueue: Promise<void> = Promise.resolve();
+
+type Restorer = () => void;
 
 /**
- * Resolve the absolute path to the `@excalidraw/utils` bundled font
- * assets directory (contains `.ttf` / `.woff2` files).
+ * Resolve the bundled `@excalidraw/utils` asset directory.
  *
- * @returns Absolute path to the assets directory.
+ * The exporter still depends on this package for two things:
+ * - `exportToSvg()` for SVG generation
+ * - bundled font files used by both the DOM polyfill and PNG rasterization
  */
-function getAssetsDir(): string {
+export function getExcalidrawAssetDir(): string {
+  if (cachedAssetsDir) return cachedAssetsDir;
+
   const require = createRequire(import.meta.url);
   const utilsEntry = require.resolve('@excalidraw/utils');
-  // Navigate from the entry point to the assets directory
-  // Typical structure: .../dist/prod/index.js → .../dist/prod/assets/
-  const utilsDir = dirname(utilsEntry);
-  return resolve(utilsDir, 'assets');
+  cachedAssetsDir = resolve(dirname(utilsEntry), 'assets');
+  return cachedAssetsDir;
 }
 
 /**
- * Initialise the minimal browser-like environment that @excalidraw/utils
- * requires to render SVGs in Node.js.
+ * Run a callback with temporary browser globals installed.
  *
- * This is concurrency-safe and idempotent — concurrent callers share the
- * same init promise, and subsequent calls after init are a no-op.
- *
- * What gets polyfilled:
- * - Core DOM globals via jsdom (`window`, `document`, `navigator`, etc.)
- * - `Path2D` stub for roughjs shape generation
- * - `FontFace` constructor with `unicodeRange` support
- * - `document.fonts` (`FontFaceSet`) for font registration
- * - `fetch()` override to load bundled font files from disk
- * - `EXCALIDRAW_ASSET_PATH` pointed at the local font proxy URL
- *
- * @returns A promise that resolves once the polyfill is in place.
+ * Exports are serialized because the polyfill touches process-wide globals.
+ * Serializing the critical section guarantees each export sees a consistent
+ * environment and that the host globals are restored cleanly afterwards.
  */
-export async function ensureDOMPolyfill(): Promise<void> {
-  if (polyfillApplied) return;
-  if (polyfillInitPromise) return polyfillInitPromise;
+export async function withDOMPolyfill<T>(callback: () => Promise<T>): Promise<T> {
+  const previousRun = exportScopeQueue;
+  let releaseQueue!: () => void;
 
-  polyfillInitPromise = performPolyfillInit();
+  exportScopeQueue = new Promise<void>((resolveQueue) => {
+    releaseQueue = resolveQueue;
+  });
+
+  await previousRun;
 
   try {
-    await polyfillInitPromise;
+    const restore = await installDOMPolyfill();
+    try {
+      return await callback();
+    } finally {
+      restore();
+    }
   } finally {
-    polyfillInitPromise = null;
+    releaseQueue();
   }
 }
 
-async function performPolyfillInit(): Promise<void> {
+async function installDOMPolyfill(): Promise<Restorer> {
   const { JSDOM } = await import('jsdom');
   const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
     url: 'https://localhost',
     pretendToBeVisual: true,
   });
 
-  const g = globalThis as Record<string, unknown>;
+  const restoreGlobals: Restorer[] = [];
+  const assetsDir = getExcalidrawAssetDir();
   const win = dom.window as unknown as Record<string, unknown>;
+  const doc = dom.window.document;
 
-  // Core DOM globals
-  g.window = dom.window;
-  g.document = dom.window.document;
-  g.navigator = dom.window.navigator;
-  g.DOMParser = dom.window.DOMParser;
-  g.Node = dom.window.Node;
-
-  // Canvas/rendering globals
-  g.devicePixelRatio = 1;
-
-  // Path2D polyfill (used by roughjs shape generation in excalidraw)
-  g.Path2D = class Path2D {
+  const Path2DImpl = class Path2D {
     d: string;
+
     constructor(path?: string) {
       this.d = path || '';
     }
+
     addPath() { /* no-op */ }
     moveTo() { /* no-op */ }
     lineTo() { /* no-op */ }
@@ -105,8 +95,6 @@ async function performPolyfillInit(): Promise<void> {
     closePath() { /* no-op */ }
   };
 
-  // FontFace polyfill with real data tracking
-  // @excalidraw/utils reads: fontFace.family, fontFace.unicodeRange
   const FontFaceImpl = class FontFace {
     family: string;
     source: string;
@@ -119,26 +107,27 @@ async function performPolyfillInit(): Promise<void> {
     unicodeRange: string;
     featureSettings: string;
 
-    constructor(family: string, source: string | ArrayBuffer, descriptors?: Record<string, string>) {
+    constructor(
+      family: string,
+      source: string | ArrayBuffer,
+      descriptors?: Record<string, string>
+    ) {
       this.family = family;
       this.source = typeof source === 'string' ? source : 'arraybuffer';
       this.descriptors = descriptors || {};
       this.display = descriptors?.display || 'swap';
       this.style = descriptors?.style || 'normal';
       this.weight = descriptors?.weight || '400';
-      // unicodeRange is critical: @excalidraw/utils calls fontFace.unicodeRange.split(...)
       this.unicodeRange = descriptors?.unicodeRange || 'U+0000-FFFF';
       this.featureSettings = descriptors?.featureSettings || '';
       this.loaded = Promise.resolve(this);
     }
+
     load(): Promise<FontFace> {
       return Promise.resolve(this);
     }
   };
-  g.FontFace = FontFaceImpl;
 
-  // FontFaceSet polyfill — tracks registered FontFace instances
-  // @excalidraw/utils uses document.fonts.add(), .has(), .check(), .load()
   const fontSet = new Set<InstanceType<typeof FontFaceImpl>>();
   const fontFaceSet = {
     add(face: InstanceType<typeof FontFaceImpl>) {
@@ -150,7 +139,6 @@ async function performPolyfillInit(): Promise<void> {
     delete(face: InstanceType<typeof FontFaceImpl>) {
       return fontSet.delete(face);
     },
-    // check() and load() return true/resolved — we pretend all fonts are available
     check(_font: string, _text?: string) {
       return true;
     },
@@ -172,38 +160,31 @@ async function performPolyfillInit(): Promise<void> {
     },
   };
 
-  // Assign document.fonts
-  const doc = dom.window.document as unknown as Record<string, unknown>;
   Object.defineProperty(doc, 'fonts', {
     value: fontFaceSet,
     writable: true,
     configurable: true,
   });
 
-  // Also set on window for @excalidraw/utils access patterns
   win.EXCALIDRAW_ASSET_PATH = FONT_PROXY_BASE;
 
-  // Resolve the local assets directory for font file loading
-  const assetsDir = getAssetsDir();
-
-  // Override global fetch to intercept font requests
-  // @excalidraw/utils calls fetch(url) to load font data — we redirect
-  // requests for our proxy base URL to local disk reads
-  const originalFetch = globalThis.fetch ?? (() => { throw new Error('fetch not available'); });
-  g.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const originalFetch = globalThis.fetch?.bind(globalThis);
+  const fetchOverride = async (
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> => {
     const url = typeof input === 'string'
       ? input
       : input instanceof URL
         ? input.href
-        : (input as Request).url;
+        : input.url;
 
     if (url.startsWith(FONT_PROXY_BASE)) {
-      // Extract font filename from the URL
       const fontFile = decodeURIComponent(url.slice(FONT_PROXY_BASE.length));
-      // Prevent path traversal attacks
       if (fontFile.includes('..') || fontFile.startsWith('/') || fontFile.includes('\\')) {
         return new Response(null, { status: 400, statusText: 'Invalid font path' });
       }
+
       const fontPath = resolve(assetsDir, fontFile);
 
       try {
@@ -219,9 +200,58 @@ async function performPolyfillInit(): Promise<void> {
       }
     }
 
-    // Pass through all other requests to the real fetch
+    if (!originalFetch) {
+      throw new Error('fetch is not available in this Node runtime');
+    }
+
     return originalFetch(input, init);
   };
 
-  polyfillApplied = true;
+  restoreGlobals.push(overrideGlobal('window', dom.window));
+  restoreGlobals.push(overrideGlobal('document', doc));
+  restoreGlobals.push(overrideGlobal('navigator', dom.window.navigator));
+  restoreGlobals.push(overrideGlobal('DOMParser', dom.window.DOMParser));
+  restoreGlobals.push(overrideGlobal('Node', dom.window.Node));
+  restoreGlobals.push(overrideGlobal('devicePixelRatio', 1));
+  restoreGlobals.push(overrideGlobal('Path2D', Path2DImpl));
+  restoreGlobals.push(overrideGlobal('FontFace', FontFaceImpl));
+  restoreGlobals.push(overrideGlobal('fetch', fetchOverride));
+
+  return () => {
+    for (let i = restoreGlobals.length - 1; i >= 0; i--) {
+      restoreGlobals[i]();
+    }
+    dom.window.close();
+  };
+}
+
+function overrideGlobal(key: string, value: unknown): Restorer {
+  const globalObject = globalThis as Record<string, unknown>;
+  const existing = Object.getOwnPropertyDescriptor(globalThis, key);
+
+  if (existing && existing.configurable === false) {
+    if ('writable' in existing && existing.writable) {
+      const previousValue = globalObject[key];
+      globalObject[key] = value;
+      return () => {
+        globalObject[key] = previousValue;
+      };
+    }
+
+    throw new Error(`Cannot temporarily override globalThis.${String(key)}`);
+  }
+
+  Object.defineProperty(globalThis, key, {
+    configurable: true,
+    writable: true,
+    value,
+  });
+
+  return () => {
+    if (existing) {
+      Object.defineProperty(globalThis, key, existing);
+      return;
+    }
+    delete globalObject[key];
+  };
 }
