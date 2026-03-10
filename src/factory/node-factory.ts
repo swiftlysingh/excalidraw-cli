@@ -19,15 +19,15 @@ import type { LayoutedNode, NodeStyle } from '../types/dsl.js';
 function mapStyle(style?: NodeStyle): Partial<ExcalidrawRectangle> {
   if (!style) return {};
 
-  return {
-    strokeColor: style.strokeColor,
-    backgroundColor: style.backgroundColor,
-    strokeWidth: style.strokeWidth,
-    strokeStyle: style.strokeStyle,
-    fillStyle: style.fillStyle,
-    opacity: style.opacity,
-    roughness: style.roughness,
-  };
+  const result: Partial<ExcalidrawRectangle> = {};
+  if (style.strokeColor !== undefined) result.strokeColor = style.strokeColor;
+  if (style.backgroundColor !== undefined) result.backgroundColor = style.backgroundColor;
+  if (style.strokeWidth !== undefined) result.strokeWidth = style.strokeWidth;
+  if (style.strokeStyle !== undefined) result.strokeStyle = style.strokeStyle;
+  if (style.fillStyle !== undefined) result.fillStyle = style.fillStyle;
+  if (style.opacity !== undefined) result.opacity = style.opacity;
+  if (style.roughness !== undefined) result.roughness = style.roughness;
+  return result;
 }
 
 /**

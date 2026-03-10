@@ -29,44 +29,10 @@ import type {
   LayoutedNode,
   LayoutedImage,
   ScatterConfig,
-  DecorationAnchor,
 } from '../types/dsl.js';
+import { getAnchorOffset } from '../layout/elk-layout.js';
 
 const SOURCE_URL = 'https://github.com/swiftlysingh/excalidraw-cli';
-
-/**
- * Calculate decoration position offset
- */
-function getDecorationOffset(
-  anchor: DecorationAnchor,
-  nodeWidth: number,
-  nodeHeight: number,
-  imageWidth: number,
-  imageHeight: number
-): { x: number; y: number } {
-  const margin = 5;
-
-  switch (anchor) {
-    case 'top':
-      return { x: (nodeWidth - imageWidth) / 2, y: -imageHeight - margin };
-    case 'bottom':
-      return { x: (nodeWidth - imageWidth) / 2, y: nodeHeight + margin };
-    case 'left':
-      return { x: -imageWidth - margin, y: (nodeHeight - imageHeight) / 2 };
-    case 'right':
-      return { x: nodeWidth + margin, y: (nodeHeight - imageHeight) / 2 };
-    case 'top-left':
-      return { x: -imageWidth / 2, y: -imageHeight / 2 };
-    case 'top-right':
-      return { x: nodeWidth - imageWidth / 2, y: -imageHeight / 2 };
-    case 'bottom-left':
-      return { x: -imageWidth / 2, y: nodeHeight - imageHeight / 2 };
-    case 'bottom-right':
-      return { x: nodeWidth - imageWidth / 2, y: nodeHeight - imageHeight / 2 };
-    default:
-      return { x: nodeWidth - imageWidth / 2, y: -imageHeight / 2 };
-  }
-}
 
 /**
  * Generate scattered images across the canvas
@@ -171,7 +137,7 @@ export function generateExcalidraw(graph: LayoutedGraph): ExcalidrawFile {
       if (node.decorations) {
         for (const decoration of node.decorations) {
           const dims = getImageDimensions(decoration.src, decoration.width, decoration.height);
-          const offset = getDecorationOffset(
+          const offset = getAnchorOffset(
             decoration.anchor,
             node.width,
             node.height,
@@ -222,10 +188,9 @@ export function generateExcalidraw(graph: LayoutedGraph): ExcalidrawFile {
         edge.points,
         edge.sourcePoint.x,
         edge.sourcePoint.y,
-        edge.id
+        edge.id,
+        { id: `text-${edge.id}` }
       );
-      // Override the text element ID to match what we bound
-      (textElement as { id: string }).id = `text-${edge.id}`;
       elements.push(textElement);
     }
   }
