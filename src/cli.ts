@@ -20,7 +20,7 @@ const program = new Command();
 program
   .name('excalidraw-cli')
   .description('Create Excalidraw flowcharts from DSL, JSON, or DOT')
-  .version('1.0.1');
+  .version('1.1.0');
 
 /**
  * Create command - main flowchart creation
@@ -31,7 +31,7 @@ program
   .argument('[input]', 'Input file path (DSL, JSON, or DOT)')
   .option('-o, --output <file>', 'Output file path', 'flowchart.excalidraw')
   .option('-f, --format <type>', 'Input format: dsl, json, dot (default: dsl)', 'dsl')
-  .option('--inline <dsl>', 'Inline DSL/DOT string')
+  .option('--inline <input>', 'Inline DSL, JSON, or DOT string')
   .option('--stdin', 'Read input from stdin')
   .option('-d, --direction <dir>', 'Flow direction: TB, BT, LR, RL (default: TB)')
   .option('-s, --spacing <n>', 'Node spacing in pixels', '50')

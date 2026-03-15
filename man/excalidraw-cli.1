@@ -1,140 +1,399 @@
-.TH EXCALIDRAW-CLI 1 "January 2026" "excalidraw-cli" "User Commands"
+.TH EXCALIDRAW-CLI 1 "March 2026" "excalidraw-cli 1.1.0" "User Commands"
 .SH NAME
-excalidraw-cli \- create Excalidraw flowcharts from DSL, JSON, or DOT
+excalidraw-cli \- create Excalidraw diagrams from DSL, JSON, or Graphviz DOT
 .SH SYNOPSIS
 .B excalidraw-cli
-.BR create " [input] [options]"
+.RB [ \-h " | " \-\-help ]
+.RB [ \-V " | " \-\-version ]
 .br
 .B excalidraw-cli
-.BR parse " <input> [options]"
+.B create
+.RI [ options ] " [input]"
 .br
 .B excalidraw-cli
-.BR --help
+.B parse
+.RI [ options ] " <input>"
 .br
 .B excalidraw-cli
-.BR --version
+.B help
+.RI [ command ]
 .SH DESCRIPTION
-excalidraw-cli generates .excalidraw flowcharts from a text DSL, JSON, or
-Graphviz DOT. It can read inline strings, stdin, or files, then lays out the
-graph and writes the result to a file or stdout.
+.B excalidraw-cli
+parses a flowchart description, lays it out with ELK, and writes an
+.B .excalidraw
+document.
+.P
+The
+.B create
+command accepts DSL, JSON, or Graphviz DOT from an inline string, standard
+input, or a file. The
+.B parse
+command reads a file, validates it, and prints a summary of the parsed graph
+without generating Excalidraw output.
 .SH COMMANDS
 .TP
 .B create
-Create an Excalidraw flowchart from DSL, JSON, or DOT input.
+Read input, parse it, apply layout, and write Excalidraw JSON.
 .TP
 .B parse
-Parse and validate input without generating output.
+Read and validate an input file and print nodes, edges, and direction.
+.TP
+.B help
+Show the built-in help for a command.
 .SH OPTIONS
 .SS "Global options"
 .TP
-.BR -h ", " --help
+.BR \-h ", " \-\-help
 Show help and exit.
 .TP
-.BR -V ", " --version
+.BR \-V ", " \-\-version
 Show version and exit.
 .SS "create options"
 .TP
-.BR -o ", " --output " " <file>
-Output file path (default: flowchart.excalidraw). Use \- to write to stdout.
+.BR \-o ", " \-\-output " " <file>
+Write the generated Excalidraw document to
+.IR file .
+The default is
+.BR flowchart.excalidraw .
+Use
+.B -
+to write to standard output.
 .TP
-.BR -f ", " --format " " <type>
-Input format: dsl, json, dot (default: dsl).
+.BR \-f ", " \-\-format " " <type>
+Input format. Supported values are
+.BR dsl ,
+.BR json ,
+and
+.BR dot .
+If omitted, the default is
+.BR dsl ,
+subject to file-extension auto-detection.
 .TP
-.BR --inline " " <dsl>
-Inline DSL or DOT string.
+.BR \-\-inline " " <input>
+Parse the supplied inline DSL, JSON, or DOT string.
+For JSON or DOT, combine with
+.BR \-\-format .
 .TP
-.BR --stdin
-Read input from stdin.
+.BR \-\-stdin
+Read input from standard input.
 .TP
-.BR -d ", " --direction " " <dir>
-Flow direction: TB, BT, LR, RL.
+.BR \-d ", " \-\-direction " " <dir>
+Override the graph direction after parsing.
+Accepted values are
+.BR TB ,
+.BR BT ,
+.BR LR ,
+and
+.BR RL .
+If supplied, this overrides direction from DSL directives, JSON options, or
+DOT
+.BR rankdir .
 .TP
-.BR -s ", " --spacing " " <n>
-Node spacing in pixels.
+.BR \-s ", " \-\-spacing " " <n>
+Override node spacing after parsing.
+If supplied and numeric, this overrides spacing from DSL directives or JSON
+options.
 .TP
-.BR --verbose
-Enable verbose logging.
+.BR \-\-verbose
+Print basic parse and layout progress information.
 .SS "parse options"
 .TP
-.BR -f ", " --format " " <type>
-Input format: dsl, json, dot (default: dsl).
-.SH "FORMAT DETECTION"
-When a file path is provided and --format is not explicitly set, the input
-format is auto-detected by extension: .json uses json, .dot or .gv uses dot,
-and all other extensions default to dsl. For --inline or --stdin, the format
-defaults to dsl unless --format is provided.
-.SH "DSL SYNTAX"
+.BR \-f ", " \-\-format " " <type>
+Input format. Supported values are
+.BR dsl ,
+.BR json ,
+and
+.BR dot .
+If omitted, the default is
+.BR dsl ,
+subject to file-extension auto-detection.
+.SH INPUT SOURCES
+For
+.BR create ,
+input is selected in this order:
+.TP
+.B 1.
+.B \-\-inline
+.TP
+.B 2.
+.B \-\-stdin
+.TP
+.B 3.
+The positional
+.I input
+file argument
+.P
+If none of these is provided,
+.B create
+exits with an error.
+.P
+.B parse
+always reads the positional
+.I input
+file argument.
+.SH FORMAT DETECTION
+When an input file is used and
+.B \-\-format
+was not explicitly provided,
+.B excalidraw-cli
+auto-detects the format from the file extension:
+.TP
+.B .json
+Use JSON input.
+.TP
+.B .dot
+or
+.B .gv
+Use DOT input.
+.TP
+Any other extension
+Use DSL input.
+.P
+For
+.B \-\-inline
+or
+.BR \-\-stdin ,
+the format remains
+.B dsl
+unless
+.B \-\-format
+is provided.
+.SH DSL FORMAT
+.SS "Node syntax"
 .TP
 .B [Label]
-Rectangle (process step).
+Rectangle node.
 .TP
 .B {Label}
-Diamond (decision).
+Diamond node.
 .TP
 .B (Label)
-Ellipse (start/end).
+Ellipse node.
 .TP
 .B [[Label]]
-Database.
+Database node.
 .TP
-.B ![path] or ![path](WxH)
-Image element, optionally with width and height.
+.B ![path]
+Image node using the default image size.
+.TP
+.B ![path](WxH)
+Image node with explicit width and height.
+.SS "Edge syntax"
 .TP
 .B A -> B
-Connection.
+Solid edge.
 .TP
 .B A --> B
-Dashed connection.
+Dashed edge.
 .TP
-.B A -> "label" -> B
-Labeled connection.
+.B A -> \(dqlabel\(dq -> B
+Labeled edge.
+.P
+Nodes are deduplicated by label and type.
+Chains such as
+.B [A] -> [B] -> [C]
+produce one edge per hop.
+.SS "Comments"
 .TP
 .B # comment
-Comments run to end of line.
-.SH DIRECTIVES
+Ignore the remainder of the line.
+.SS "Directives"
 .TP
 .B @direction TB|BT|LR|RL
-Set flow direction.
+Set graph direction.
 .TP
 .B @spacing N
-Set node spacing in pixels.
+Set node spacing.
 .TP
 .B @image path at X,Y
-Position an image at absolute coordinates.
+Place an image at absolute coordinates.
 .TP
 .B @image path near (NodeLabel) [anchor]
-Position an image near a node with optional anchor.
+Place an image relative to a node label.
 .TP
-.B @decorate path anchor
-Attach a decoration to the preceding node.
+.B @decorate path [anchor]
+Attach a decoration image to the preceding node.
+If
+.I anchor
+is omitted, the default is
+.BR top-right .
 .TP
-.B @sticker name [at X,Y|near (NodeLabel) [anchor]]
-Add a sticker from the current library.
+.B @sticker name
+Add a sticker image at the default absolute position
+.BR 0,0 .
+.TP
+.B @sticker name at X,Y
+Add a sticker at absolute coordinates.
+.TP
+.B @sticker name near (NodeLabel) [anchor]
+Add a sticker relative to a node label.
 .TP
 .B @library path
-Set the sticker library path.
+Set the sticker library path used to resolve
+.B sticker:
+references.
 .TP
 .B @scatter path count:N [width:W] [height:H]
-Scatter repeated images across the canvas.
+Scatter repeated images across the output canvas.
+.SH JSON FORMAT
+JSON input must parse to an object with the following top-level properties:
+.TP
+.B nodes
+Required array of node objects. Each node has:
+.IR id ,
+.IR type ,
+.IR label ,
+and optional
+.IR style .
+.TP
+.B edges
+Required array of edge objects. Each edge has:
+.IR from ,
+.IR to ,
+and optional
+.IR label
+and
+.IR style .
+.TP
+.B options
+Optional object merged into the default layout options.
+.P
+Recognized JSON node types are
+.BR rectangle ,
+.BR diamond ,
+.BR ellipse ,
+and
+.BR database .
+Any other node type is treated as
+.BR rectangle .
+.SH DOT FORMAT
+DOT input is parsed with
+.BR ts-graphviz .
+Supported behavior includes:
+.TP
+.B Graph kinds
+.B digraph
+and
+.B graph
+are accepted.
+.TP
+.B Edges
+Directed
+.RB ( -> )
+and undirected
+.RB ( -- )
+edges are accepted.
+Edge chains are expanded into one edge per hop.
+.TP
+.B Labels
+Node
+.B label=
+and edge
+.B label=
+attributes are preserved.
+.TP
+.B Shapes
+DOT shapes are mapped to Excalidraw node types:
+.B diamond
+to diamond;
+.BR ellipse ,
+.BR oval ,
+and
+.B circle
+to ellipse;
+.BR cylinder ,
+.BR record ,
+and
+.B mrecord
+to database;
+all other shapes to rectangle.
+.TP
+.B Layout attributes
+.B rankdir=TB|BT|LR|RL
+sets direction.
+.B nodesep
+and
+.B ranksep
+are converted into approximate pixel spacing.
+.TP
+.B Styles
+Node and edge
+.B color
+and dashed or dotted
+.B style
+attributes are preserved when possible.
+.TP
+.B Subgraphs
+Subgraph nodes and edges are flattened into the main graph.
+.SH IMAGES AND STICKERS
+Image nodes, positioned images, decorations, scattered images, and stickers
+are embedded from local files.
+HTTP and HTTPS URLs are accepted syntactically but are skipped during output
+generation with a warning.
+.P
+If image dimensions are not provided, the default size is
+.BR 100x100 .
+For scattered images, the default size is
+.BR 30x30 .
+.P
+Sticker names are resolved relative to the active
+.B @library
+path.
+Common file extensions such as
+.BR .png ,
+.BR .svg ,
+.BR .jpg ,
+.BR .jpeg ,
+.BR .gif ,
+and
+.B .webp
+are tried automatically.
+.SH OUTPUT
+.B create
+writes formatted Excalidraw JSON.
+If
+.B \-\-output
+is not
+.BR - ,
+the command prints
+.BR "Created: <file>" .
+.P
+.B parse
+prints a human-readable summary containing node count, edge count, direction,
+then the parsed node and edge list.
+.SH DIAGNOSTICS
+The commands exit with status 1 on parse errors, missing input, file read
+failures, or generation failures.
+.P
+Image resolution failures are warnings when the rest of the document can still
+be generated.
 .SH EXAMPLES
 .TP
 .B Create from inline DSL
 excalidraw-cli create --inline "(Start) -> [Process] -> (End)" -o flow.excalidraw
 .TP
-.B Create from a file
-excalidraw-cli create flowchart.dsl -o diagram.excalidraw
+.B Create from inline JSON
+excalidraw-cli create --format json --inline '{"nodes":[{"id":"a","type":"rectangle","label":"A"}],"edges":[]}' -o flow.excalidraw
 .TP
 .B Create from stdin
 echo "[A] -> [B]" | excalidraw-cli create --stdin -o diagram.excalidraw
 .TP
+.B Write to stdout
+excalidraw-cli create flowchart.dsl -o -
+.TP
 .B Parse a DOT file
 excalidraw-cli parse graph.dot --format dot
+.TP
+.B Show command help
+excalidraw-cli help create
 .SH EXIT STATUS
 .TP
 .B 0
 Success.
 .TP
 .B 1
-An error occurred.
+Failure.
 .SH SEE ALSO
-Excalidraw: https://excalidraw.com
+Excalidraw:
+.UR https://excalidraw.com
+.UE
