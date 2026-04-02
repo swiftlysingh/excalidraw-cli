@@ -1,0 +1,56 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "test",
+  "elements": [
+    {
+      "id": "img-1",
+      "type": "image",
+      "x": 10,
+      "y": 20,
+      "width": 32,
+      "height": 32,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a0",
+      "roundness": null,
+      "seed": 1,
+      "version": 1,
+      "versionNonce": 1,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1,
+      "link": null,
+      "locked": false,
+      "fileId": "file-1",
+      "status": "saved",
+      "scale": [
+        1,
+        1
+      ]
+    }
+  ],
+  "appState": {
+    "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
+    "viewBackgroundColor": "#ffffff",
+    "lockedMultiSelections": {}
+  },
+  "files": {
+    "file-1": {
+      "mimeType": "image/png",
+      "id": "file-1",
+      "dataURL": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAEUlEQVR4nGP8z8AARAhAhgAAP70H/ZMggSAAAAAASUVORK5CYII=",
+      "created": 1
+    }
+  }
+}

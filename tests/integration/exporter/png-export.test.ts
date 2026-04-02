@@ -6,15 +6,118 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { inflateSync } from 'zlib';
 import { convertToPNG, convertImage } from '../../../src/exporter/image-exporter.js';
 import {
   createMinimalFile,
   createMultiElementFile,
   createFileWithBackground,
+  loadExcalidrawFixture,
 } from '../../helpers/fixtures.js';
 
 // PNG magic bytes: 0x89 0x50 0x4E 0x47 (‰PNG)
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+
+function paethPredictor(a: number, b: number, c: number): number {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+
+  if (pa <= pb && pa <= pc) return a;
+  if (pb <= pc) return b;
+  return c;
+}
+
+function decodePngRgba(png: Buffer): { width: number; height: number; pixels: Buffer } {
+  const signature = png.subarray(0, 8);
+  expect(signature.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true);
+
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  const idatChunks: Buffer[] = [];
+
+  while (offset < png.length) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const data = png.subarray(dataStart, dataEnd);
+    offset = dataEnd + 4;
+
+    if (type === 'IHDR') {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      bitDepth = data[8];
+      colorType = data[9];
+    } else if (type === 'IDAT') {
+      idatChunks.push(data);
+    } else if (type === 'IEND') {
+      break;
+    }
+  }
+
+  expect(bitDepth).toBe(8);
+  expect(colorType).toBe(6);
+
+  const raw = inflateSync(Buffer.concat(idatChunks));
+  const stride = width * 4;
+  const pixels = Buffer.alloc(width * height * 4);
+  let src = 0;
+
+  for (let y = 0; y < height; y++) {
+    const filter = raw[src++];
+    const rowStart = y * stride;
+
+    for (let x = 0; x < stride; x++) {
+      const byte = raw[src++];
+      const left = x >= 4 ? pixels[rowStart + x - 4] : 0;
+      const up = y > 0 ? pixels[rowStart - stride + x] : 0;
+      const upLeft = y > 0 && x >= 4 ? pixels[rowStart - stride + x - 4] : 0;
+
+      let value = byte;
+      switch (filter) {
+        case 0:
+          break;
+        case 1:
+          value = (byte + left) & 0xff;
+          break;
+        case 2:
+          value = (byte + up) & 0xff;
+          break;
+        case 3:
+          value = (byte + Math.floor((left + up) / 2)) & 0xff;
+          break;
+        case 4:
+          value = (byte + paethPredictor(left, up, upLeft)) & 0xff;
+          break;
+        default:
+          throw new Error(`Unsupported PNG filter type: ${filter}`);
+      }
+
+      pixels[rowStart + x] = value;
+    }
+  }
+
+  return { width, height, pixels };
+}
+
+function getPixel(
+  decoded: { width: number; height: number; pixels: Buffer },
+  x: number,
+  y: number
+): [number, number, number, number] {
+  const index = (y * decoded.width + x) * 4;
+  return [
+    decoded.pixels[index],
+    decoded.pixels[index + 1],
+    decoded.pixels[index + 2],
+    decoded.pixels[index + 3],
+  ];
+}
 
 describe('convertToPNG', () => {
   describe('basic PNG generation', () => {
@@ -144,6 +247,30 @@ describe('convertToPNG', () => {
 
       expect(Buffer.isBuffer(png)).toBe(true);
       expect(png.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
+    }, 30000);
+  });
+
+  describe('embedded images', () => {
+    it('should render embedded image content instead of placeholder squares', async () => {
+      const file = loadExcalidrawFixture('embedded-image.excalidraw');
+      const png = await convertToPNG(file, { exportBackground: false, padding: 0 });
+      const decoded = decodePngRgba(png);
+
+      expect(decoded.width).toBeGreaterThanOrEqual(32);
+      expect(decoded.height).toBeGreaterThanOrEqual(32);
+
+      let sawRedPixel = false;
+      for (let y = 0; y < decoded.height && !sawRedPixel; y++) {
+        for (let x = 0; x < decoded.width; x++) {
+          const [r, g, b, a] = getPixel(decoded, x, y);
+          if (r > 200 && g < 80 && b < 80 && a > 200) {
+            sawRedPixel = true;
+            break;
+          }
+        }
+      }
+
+      expect(sawRedPixel).toBe(true);
     }, 30000);
   });
 });
