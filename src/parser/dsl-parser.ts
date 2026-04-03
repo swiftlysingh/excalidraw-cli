@@ -30,10 +30,13 @@ import type {
   GraphEdge,
   LayoutOptions,
   NodeType,
+  NodeStyle,
   PositionedImage,
   ScatterConfig,
   DecorationAnchor,
   ImageSource,
+  FillStyle,
+  StrokeStyle,
 } from '../types/dsl.js';
 import { DEFAULT_LAYOUT_OPTIONS } from '../types/dsl.js';
 
@@ -41,6 +44,7 @@ interface Token {
   type: 'node' | 'arrow' | 'label' | 'directive' | 'newline' | 'image' | 'decorate';
   value: string;
   nodeType?: NodeType;
+  nodeStyle?: NodeStyle;
   dashed?: boolean;
   // Image-specific properties
   imageSrc?: string;
@@ -48,6 +52,234 @@ interface Token {
   imageHeight?: number;
   // Decoration-specific properties
   decorationAnchor?: DecorationAnchor;
+}
+
+const SUPPORTED_NODE_STYLE_KEYS = [
+  'fillStyle',
+  'backgroundColor',
+  'strokeColor',
+  'strokeWidth',
+  'strokeStyle',
+  'roughness',
+  'opacity',
+] as const;
+
+type SupportedNodeStyleKey = (typeof SUPPORTED_NODE_STYLE_KEYS)[number];
+
+interface NodeSelector {
+  label: string;
+  type: NodeType;
+}
+
+interface PreprocessedDSL {
+  content: string;
+  nodeStyles: Map<string, NodeStyle>;
+}
+
+function isSupportedNodeStyleKey(key: string): key is SupportedNodeStyleKey {
+  return SUPPORTED_NODE_STYLE_KEYS.includes(key as SupportedNodeStyleKey);
+}
+
+function parseNumericNodeStyleValue(key: SupportedNodeStyleKey, value: string): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    throw new Error(`Invalid numeric value for ${key}: ${value}`);
+  }
+  return numeric;
+}
+
+function parseNodeStyleValue(key: SupportedNodeStyleKey, rawValue: string): Partial<NodeStyle> {
+  const value = rawValue.trim();
+  if (!value) {
+    throw new Error(`Missing value for node style key: ${key}`);
+  }
+
+  switch (key) {
+    case 'fillStyle': {
+      const validFillStyles: FillStyle[] = ['solid', 'hachure', 'cross-hatch'];
+      if (!validFillStyles.includes(value as FillStyle)) {
+        throw new Error(`Invalid fillStyle value: ${value}`);
+      }
+      return { fillStyle: value as FillStyle };
+    }
+    case 'strokeStyle': {
+      const validStrokeStyles: StrokeStyle[] = ['solid', 'dashed', 'dotted'];
+      if (!validStrokeStyles.includes(value as StrokeStyle)) {
+        throw new Error(`Invalid strokeStyle value: ${value}`);
+      }
+      return { strokeStyle: value as StrokeStyle };
+    }
+    case 'backgroundColor':
+      return { backgroundColor: value };
+    case 'strokeColor':
+      return { strokeColor: value };
+    case 'strokeWidth':
+      return { strokeWidth: parseNumericNodeStyleValue(key, value) };
+    case 'roughness':
+      return { roughness: parseNumericNodeStyleValue(key, value) };
+    case 'opacity':
+      return { opacity: parseNumericNodeStyleValue(key, value) };
+    default:
+      return {};
+  }
+}
+
+function parseNodeStyleEntries(entries: Array<[string, string]>, context: string): NodeStyle {
+  let style: NodeStyle = {};
+
+  for (const [key, rawValue] of entries) {
+    if (!isSupportedNodeStyleKey(key)) {
+      throw new Error(`Unsupported node style key "${key}" in ${context}`);
+    }
+
+    style = { ...style, ...parseNodeStyleValue(key, rawValue) };
+  }
+
+  return style;
+}
+
+function mergeNodeStyles(base?: NodeStyle, overrides?: NodeStyle): NodeStyle | undefined {
+  if (!base && !overrides) return undefined;
+  return {
+    ...(base ?? {}),
+    ...(overrides ?? {}),
+  };
+}
+
+function getNodeKey(label: string, type: NodeType): string {
+  return `${type}:${label}`;
+}
+
+function parseNodeBody(rawLabel: string): { label: string; style?: NodeStyle } {
+  const trimmed = rawLabel.trim();
+  if (!trimmed) {
+    throw new Error('Node label cannot be empty');
+  }
+
+  let working = trimmed;
+  const styleEntries: Array<[string, string]> = [];
+
+  while (true) {
+    const match = working.match(/^(.*\S)\s+@([A-Za-z][A-Za-z0-9]*):(\S+)$/);
+    if (!match) {
+      break;
+    }
+
+    const [, precedingLabel, key, value] = match;
+    if (!isSupportedNodeStyleKey(key)) {
+      throw new Error(`Unsupported node style key "${key}" in node "${trimmed}"`);
+    }
+
+    styleEntries.unshift([key, value]);
+    working = precedingLabel;
+  }
+
+  const label = working.trim();
+  if (!label) {
+    throw new Error(`Node label cannot be empty in node "${trimmed}"`);
+  }
+
+  return {
+    label,
+    style: styleEntries.length > 0 ? parseNodeStyleEntries(styleEntries, `node "${label}"`) : undefined,
+  };
+}
+
+function parseNodeSelector(selector: string): NodeSelector {
+  const trimmed = selector.trim();
+  let rawLabel = '';
+  let type: NodeType;
+
+  if (trimmed.startsWith('[[') && trimmed.endsWith(']]')) {
+    rawLabel = trimmed.slice(2, -2);
+    type = 'database';
+  } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    rawLabel = trimmed.slice(1, -1);
+    type = 'rectangle';
+  } else if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    rawLabel = trimmed.slice(1, -1);
+    type = 'diamond';
+  } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    rawLabel = trimmed.slice(1, -1);
+    type = 'ellipse';
+  } else {
+    throw new Error(`Invalid @node selector: ${selector}`);
+  }
+
+  const { label, style } = parseNodeBody(rawLabel);
+  if (style) {
+    throw new Error(`@node selector cannot include inline styles: ${selector}`);
+  }
+
+  return { label, type };
+}
+
+function preprocessNodeStyleBlocks(input: string): PreprocessedDSL {
+  const lines = input.split('\n');
+  const outputLines: string[] = [];
+  const nodeStyles = new Map<string, NodeStyle>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed.startsWith('@node ')) {
+      outputLines.push(line);
+      continue;
+    }
+
+    const selector = trimmed.slice('@node'.length).trim();
+    const { label, type } = parseNodeSelector(selector);
+    let blockStyle: NodeStyle | undefined;
+    let hasStyleLine = false;
+
+    outputLines.push('');
+
+    while (i + 1 < lines.length && /^[\t ]+/.test(lines[i + 1])) {
+      i++;
+      const styleLine = lines[i].trim();
+      outputLines.push('');
+
+      if (!styleLine || styleLine.startsWith('#')) {
+        continue;
+      }
+
+      const separatorIndex = styleLine.indexOf(':');
+      if (separatorIndex === -1) {
+        throw new Error(`Invalid @node style entry: ${styleLine}`);
+      }
+
+      const key = styleLine.slice(0, separatorIndex).trim();
+      const value = styleLine.slice(separatorIndex + 1).trim();
+      blockStyle = mergeNodeStyles(
+        blockStyle,
+        parseNodeStyleEntries([[key, value]], `@node ${selector}`)
+      );
+      hasStyleLine = true;
+    }
+
+    if (!hasStyleLine) {
+      throw new Error(`@node ${selector} must include at least one indented style line`);
+    }
+
+    const nodeKey = getNodeKey(label, type);
+    nodeStyles.set(nodeKey, mergeNodeStyles(nodeStyles.get(nodeKey), blockStyle)!);
+  }
+
+  return {
+    content: outputLines.join('\n'),
+    nodeStyles,
+  };
+}
+
+function createNodeToken(rawLabel: string, nodeType: NodeType): Token {
+  const { label, style } = parseNodeBody(rawLabel);
+  return {
+    type: 'node',
+    value: label,
+    nodeType,
+    nodeStyle: style,
+  };
 }
 
 /**
@@ -160,7 +392,7 @@ function tokenize(input: string): Token[] {
         i++;
       }
       i += 2; // skip ]]
-      tokens.push({ type: 'node', value: label.trim(), nodeType: 'database' });
+      tokens.push(createNodeToken(label, 'database'));
       continue;
     }
 
@@ -175,7 +407,7 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
-      tokens.push({ type: 'node', value: label.trim(), nodeType: 'rectangle' });
+      tokens.push(createNodeToken(label, 'rectangle'));
       continue;
     }
 
@@ -190,7 +422,7 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
-      tokens.push({ type: 'node', value: label.trim(), nodeType: 'diamond' });
+      tokens.push(createNodeToken(label, 'diamond'));
       continue;
     }
 
@@ -205,7 +437,7 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
-      tokens.push({ type: 'node', value: label.trim(), nodeType: 'ellipse' });
+      tokens.push(createNodeToken(label, 'ellipse'));
       continue;
     }
 
@@ -314,7 +546,8 @@ function parseScatterDirective(value: string): ScatterConfig | null {
  * Parse tokens into a FlowchartGraph
  */
 export function parseDSL(input: string): FlowchartGraph {
-  const tokens = tokenize(input);
+  const { content, nodeStyles } = preprocessNodeStyleBlocks(input);
+  const tokens = tokenize(content);
 
   const nodes: Map<string, GraphNode> = new Map();
   const edges: GraphEdge[] = [];
@@ -327,22 +560,32 @@ export function parseDSL(input: string): FlowchartGraph {
   function getOrCreateNode(
     label: string,
     type: NodeType,
-    imageData?: ImageSource
+    imageData?: ImageSource,
+    inlineStyle?: NodeStyle
   ): GraphNode {
     // Use label as key for deduplication
-    const key = `${type}:${label}`;
+    const key = getNodeKey(label, type);
     if (!nodes.has(key)) {
       const node: GraphNode = {
         id: nanoid(10),
         type,
         label,
+        style: mergeNodeStyles(nodeStyles.get(key), inlineStyle),
       };
       if (imageData) {
         node.image = imageData;
       }
       nodes.set(key, node);
     }
-    return nodes.get(key)!;
+
+    const node = nodes.get(key)!;
+    if (!node.style && nodeStyles.has(key)) {
+      node.style = mergeNodeStyles(node.style, nodeStyles.get(key));
+    }
+    if (inlineStyle) {
+      node.style = mergeNodeStyles(node.style, inlineStyle);
+    }
+    return node;
   }
 
   let i = 0;
@@ -450,7 +693,7 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     if (token.type === 'node') {
-      const node = getOrCreateNode(token.value, token.nodeType!);
+      const node = getOrCreateNode(token.value, token.nodeType!, undefined, token.nodeStyle);
 
       if (lastNode) {
         // Create edge from lastNode to this node

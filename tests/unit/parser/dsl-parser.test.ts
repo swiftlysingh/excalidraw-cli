@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseDSL } from '../../../src/parser/dsl-parser.js';
+import { layoutGraph } from '../../../src/layout/elk-layout.js';
+import { generateExcalidraw } from '../../../src/generator/excalidraw-generator.js';
 
 describe('DSL Parser', () => {
   describe('node parsing', () => {
@@ -29,6 +31,39 @@ describe('DSL Parser', () => {
       expect(result.nodes).toHaveLength(1);
       expect(result.nodes[0].type).toBe('database');
       expect(result.nodes[0].label).toBe('Database');
+    });
+
+    it('should parse inline styles on rectangle nodes', () => {
+      const result = parseDSL('[Process Step @fillStyle:hachure @backgroundColor:#a5d8ff]');
+      expect(result.nodes).toHaveLength(1);
+      expect(result.nodes[0].label).toBe('Process Step');
+      expect(result.nodes[0].style).toEqual({
+        fillStyle: 'hachure',
+        backgroundColor: '#a5d8ff',
+      });
+    });
+
+    it('should parse inline styles on non-rectangle nodes', () => {
+      const result = parseDSL(
+        '{Decision? @strokeStyle:dotted}\n(End @opacity:80)\n[[DB @strokeWidth:3 @roughness:2]]'
+      );
+
+      expect(result.nodes.find((node) => node.label === 'Decision?')?.style).toEqual({
+        strokeStyle: 'dotted',
+      });
+      expect(result.nodes.find((node) => node.label === 'End')?.style).toEqual({
+        opacity: 80,
+      });
+      expect(result.nodes.find((node) => node.label === 'DB')?.style).toEqual({
+        strokeWidth: 3,
+        roughness: 2,
+      });
+    });
+
+    it('should preserve labels containing @ when they are not style attributes', () => {
+      const result = parseDSL('[email@company.com]');
+      expect(result.nodes[0].label).toBe('email@company.com');
+      expect(result.nodes[0].style).toBeUndefined();
     });
   });
 
@@ -68,6 +103,22 @@ describe('DSL Parser', () => {
       const result = parseDSL('@spacing 100\n[A] -> [B]');
       expect(result.options.nodeSpacing).toBe(100);
     });
+
+    it('should parse @node style blocks and merge them into matching nodes', () => {
+      const result = parseDSL(`
+        @node [Login]
+          fillStyle: hachure
+          backgroundColor: #a5d8ff
+
+        (Start) -> [Login] -> (End)
+      `);
+
+      const loginNode = result.nodes.find((node) => node.label === 'Login');
+      expect(loginNode?.style).toEqual({
+        fillStyle: 'hachure',
+        backgroundColor: '#a5d8ff',
+      });
+    });
   });
 
   describe('complex flowcharts', () => {
@@ -87,6 +138,29 @@ describe('DSL Parser', () => {
       const result = parseDSL('[A] -> [B]\n[B] -> [C]');
       const bNodes = result.nodes.filter((n) => n.label === 'B');
       expect(bNodes).toHaveLength(1);
+    });
+
+    it('should allow later inline styles to override @node block defaults', () => {
+      const result = parseDSL(`
+        @node [A]
+          fillStyle: solid
+          backgroundColor: #ffffff
+
+        [A @fillStyle:hachure] -> [B]
+      `);
+
+      expect(result.nodes.find((node) => node.label === 'A')?.style).toEqual({
+        fillStyle: 'hachure',
+        backgroundColor: '#ffffff',
+      });
+    });
+
+    it('should merge explicit styles across repeated node references', () => {
+      const result = parseDSL('[A @fillStyle:hachure] -> [B]\n[B] -> [A @backgroundColor:#ffc9c9]');
+      expect(result.nodes.find((node) => node.label === 'A')?.style).toEqual({
+        fillStyle: 'hachure',
+        backgroundColor: '#ffc9c9',
+      });
     });
   });
 
@@ -194,6 +268,50 @@ describe('DSL Parser', () => {
       const result = parseDSL('@scatter star.png count:10 width:30 height:30');
       expect(result.scatter![0].width).toBe(30);
       expect(result.scatter![0].height).toBe(30);
+    });
+  });
+
+  describe('style validation', () => {
+    it('should reject unsupported inline style keys', () => {
+      expect(() => parseDSL('[A @borderRadius:4]')).toThrow(
+        'Unsupported node style key "borderRadius" in node "A @borderRadius:4"'
+      );
+    });
+
+    it('should reject invalid fillStyle values', () => {
+      expect(() => parseDSL('[A @fillStyle:zigzag]')).toThrow('Invalid fillStyle value: zigzag');
+    });
+
+    it('should reject invalid numeric style values', () => {
+      expect(() => parseDSL('[A @opacity:abc]')).toThrow('Invalid numeric value for opacity: abc');
+    });
+
+    it('should reject malformed @node block entries', () => {
+      expect(() => parseDSL('@node [A]\n  fillStyle hachure')).toThrow(
+        'Invalid @node style entry: fillStyle hachure'
+      );
+    });
+
+    it('should reject @node blocks without style lines', () => {
+      expect(() => parseDSL('@node [A]\n[A] -> [B]')).toThrow(
+        '@node [A] must include at least one indented style line'
+      );
+    });
+  });
+
+  describe('style generation', () => {
+    it('should carry parsed node styles into generated Excalidraw elements', async () => {
+      const graph = parseDSL('[Styled @fillStyle:hachure @backgroundColor:#a5d8ff]');
+      const layoutedGraph = await layoutGraph(graph);
+      const excalidrawFile = generateExcalidraw(layoutedGraph);
+      const shape = excalidrawFile.elements.find(
+        (element) => element.type === 'rectangle' && element.id === graph.nodes[0].id
+      );
+
+      expect(shape).toMatchObject({
+        fillStyle: 'hachure',
+        backgroundColor: '#a5d8ff',
+      });
     });
   });
 });
