@@ -28,10 +28,19 @@
 
 Requires `Node >=20.19.0`. Node 18 is no longer supported.
 
+### Using Homebrew
+
+```bash
+brew tap swiftlysingh/excalidraw-cli https://github.com/swiftlysingh/excalidraw-cli
+brew install swiftlysingh/excalidraw-cli/excalidraw-cli
+```
+
+Homebrew installs the published npm package defined in `Formula/excalidraw-cli.rb`, so the formula stays aligned with the tagged release artifacts.
+
 ### Using npm
 
 ```bash
-npm i @swiftlysingh/excalidraw-cli
+npm install -g @swiftlysingh/excalidraw-cli
 ```
 
 ### From Source (Local Development)

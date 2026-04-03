@@ -15,4 +15,21 @@ describe('package metadata', () => {
 
     expect(packageJson.engines?.node).toBe('>=20.19.0');
   });
+
+  it('keeps the Homebrew formula pinned to the published npm package', () => {
+    const packageJsonPath = join(PROJECT_ROOT, 'package.json');
+    const formulaPath = join(PROJECT_ROOT, 'Formula', 'excalidraw-cli.rb');
+
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+      name: string;
+      version: string;
+    };
+    const formula = readFileSync(formulaPath, 'utf8');
+
+    const tarballName = packageJson.name.split('/').at(-1);
+    const expectedTarballUrl =
+      `https://registry.npmjs.org/${packageJson.name}/-/${tarballName}-${packageJson.version}.tgz`;
+
+    expect(formula).toContain(`url "${expectedTarballUrl}"`);
+  });
 });

@@ -76,6 +76,11 @@ jobs:
             npm install -g @swiftlysingh/excalidraw-cli
             ```
 
+            ```bash
+            brew tap swiftlysingh/excalidraw-cli https://github.com/swiftlysingh/excalidraw-cli
+            brew install swiftlysingh/excalidraw-cli/excalidraw-cli
+            ```
+
             📦 [View on npm](https://www.npmjs.com/package/@swiftlysingh/excalidraw-cli/v/${{ steps.package.outputs.version }})
           generate_release_notes: true
         env:
