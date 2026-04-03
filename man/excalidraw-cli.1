@@ -173,6 +173,14 @@ Ellipse node.
 .B [[Label]]
 Database node.
 .TP
+.BI "[Label @key:value ...]"
+Rectangle node with inline style attributes.
+.TP
+.BI "@node [Label]"
+Start a node-style block followed by indented
+.I key: value
+lines.
+.TP
 .B ![path]
 Image node using the default image size.
 .TP
@@ -193,6 +201,34 @@ Nodes are deduplicated by label and type.
 Chains such as
 .B [A] -> [B] -> [C]
 produce one edge per hop.
+.SS "Node styling"
+.P
+Shape nodes can define style properties inline:
+.P
+.B [Login @fillStyle:hachure @backgroundColor:#a5d8ff]
+.P
+Supported style keys are
+.BR fillStyle ,
+.BR backgroundColor ,
+.BR strokeColor ,
+.BR strokeWidth ,
+.BR strokeStyle ,
+.BR roughness ,
+and
+.BR opacity .
+.P
+Node styles can also be declared in a block:
+.P
+.RS
+.nf
+@node [Login]
+  fillStyle: hachure
+  backgroundColor: #a5d8ff
+.fi
+.RE
+.P
+When both forms are used, block styles provide defaults and inline attributes
+override them on matching nodes.
 .SS "Comments"
 .TP
 .B # comment
@@ -377,6 +413,9 @@ excalidraw-cli create --format json --inline '{"nodes":[{"id":"a","type":"rectan
 .TP
 .B Create from stdin
 echo "[A] -> [B]" | excalidraw-cli create --stdin -o diagram.excalidraw
+.TP
+.B Create a styled node from inline DSL
+excalidraw-cli create --inline "(Start) -> [Login @fillStyle:hachure @backgroundColor:#a5d8ff] -> (End)" -o styled.excalidraw
 .TP
 .B Write to stdout
 excalidraw-cli create flowchart.dsl -o -

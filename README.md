@@ -87,6 +87,7 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `{Label}` | Diamond | Decisions, conditionals |
 | `(Label)` | Ellipse | Start/End points |
 | `[[Label]]` | Database | Data storage |
+| `[Label @fillStyle:hachure @backgroundColor:#a5d8ff]` | Styled node | Add inline node style attributes |
 | `->` | Arrow | Connection |
 | `-->` | Dashed Arrow | Dashed connection |
 | `-> "text" ->` | Labeled Arrow | Connection with label |
@@ -98,6 +99,41 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 {Valid?} -> "yes" -> [Dashboard] -> (End)
 {Valid?} -> "no" -> [Show Error] -> [Enter Credentials]
 ```
+
+### Node Styling
+
+Add shape-level styling directly to nodes with inline `@key:value` attributes:
+
+```excalidraw
+(Start) -> [Enter Credentials @fillStyle:hachure @backgroundColor:#a5d8ff] -> {Valid?}
+{Valid?} -> "no" -> [Show Error @backgroundColor:#ffc9c9 @strokeStyle:dashed] -> [Enter Credentials]
+```
+
+For repeated or shared nodes, define defaults with an `@node` block:
+
+```excalidraw
+@node [Enter Credentials]
+  fillStyle: solid
+  backgroundColor: #a5d8ff
+
+(Start) -> [Enter Credentials @fillStyle:hachure] -> {Valid?}
+```
+
+Supported node style keys:
+
+- `fillStyle`: `solid`, `hachure`, `cross-hatch`
+- `backgroundColor`
+- `strokeColor`
+- `strokeWidth`
+- `strokeStyle`: `solid`, `dashed`, `dotted`
+- `roughness`
+- `opacity`
+
+Precedence rules:
+
+- `@node` blocks provide defaults for matching nodes
+- inline node attributes override block values
+- repeated references to the same node merge explicit style properties with later values winning per property
 
 ### Directives
 
