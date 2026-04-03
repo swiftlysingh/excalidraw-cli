@@ -10,6 +10,7 @@
  */
 
 import { parse, format } from 'node:path';
+import { JSDOM } from 'jsdom';
 import { withDOMPolyfill, getExcalidrawAssetDir } from './dom-polyfill.js';
 import type { ExcalidrawFile } from '../types/excalidraw.js';
 
@@ -131,9 +132,10 @@ export async function convertToPNG(
   const opts = resolveOptions(file, { format: 'png', ...options });
   return withExporterRuntime(async () => {
     const svgString = await renderSvg(file, opts);
+    const normalizedSvg = normalizeSvgForRasterization(svgString);
     const { Resvg } = await import('@resvg/resvg-js');
 
-    const widthMatch = svgString.match(/width="([^"]+)"/);
+    const widthMatch = normalizedSvg.match(/width="([^"]+)"/);
     const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
 
     const scale =
@@ -147,7 +149,7 @@ export async function convertToPNG(
     // still need the packaged Excalidraw font files to keep text rendering sane.
     const fontDir = getExcalidrawFontDir();
 
-    const resvg = new Resvg(svgString, {
+    const resvg = new Resvg(normalizedSvg, {
       fitTo: {
         mode: 'width' as const,
         value: scaledWidth,
@@ -164,6 +166,106 @@ export async function convertToPNG(
 
     return Buffer.from(pngBuffer);
   });
+}
+
+/**
+ * Normalize SVG output for rasterizers that do not fully support Excalidraw's
+ * image `<symbol>` + `<use>` pattern. We only apply this to the PNG path so
+ * raw SVG export stays identical to Excalidraw's browser-oriented markup.
+ */
+export function normalizeSvgForRasterization(svgString: string): string {
+  const dom = new JSDOM(svgString, { contentType: 'image/svg+xml' });
+  const doc = dom.window.document as any;
+  const root = doc.documentElement as any;
+
+  if (!root || root.nodeName.toLowerCase() !== 'svg') {
+    dom.window.close();
+    return svgString;
+  }
+
+  const imageSymbols = new Map<string, any>();
+
+  for (const symbol of Array.from(doc.querySelectorAll('symbol[id]')) as any[]) {
+    const id = symbol.getAttribute('id');
+    const image = Array.from(symbol.children).find(
+      (child: any) => child.tagName.toLowerCase() === 'image'
+    );
+    if (id && image) {
+      imageSymbols.set(id, image);
+    }
+  }
+
+  if (imageSymbols.size === 0) {
+    dom.window.close();
+    return svgString;
+  }
+
+  const touchedSymbolIds = new Set<string>();
+  const passthroughAttributes = [
+    'x',
+    'y',
+    'width',
+    'height',
+    'opacity',
+    'transform',
+    'style',
+    'class',
+    'clip-path',
+    'mask',
+    'filter',
+    'preserveAspectRatio',
+  ];
+
+  for (const useEl of Array.from(doc.querySelectorAll('use')) as any[]) {
+    const href = useEl.getAttribute('href') || useEl.getAttribute('xlink:href');
+    if (!href?.startsWith('#')) {
+      continue;
+    }
+
+    const image = imageSymbols.get(href.slice(1));
+    if (!image) {
+      continue;
+    }
+
+    const replacement = image.cloneNode(true) as any;
+    for (const attr of passthroughAttributes) {
+      const value = useEl.getAttribute(attr);
+      if (value !== null) {
+        replacement.setAttribute(attr, value);
+      }
+    }
+
+    useEl.replaceWith(replacement);
+    touchedSymbolIds.add(href.slice(1));
+  }
+
+  for (const symbolId of touchedSymbolIds) {
+    const stillReferenced = (Array.from(doc.querySelectorAll('use')) as any[]).some((useEl) => {
+      const href = useEl.getAttribute('href') || useEl.getAttribute('xlink:href');
+      return href === `#${symbolId}`;
+    });
+
+    if (stillReferenced) {
+      continue;
+    }
+
+    const symbol = (Array.from(doc.querySelectorAll('symbol[id]')) as any[]).find(
+      (candidate) => candidate.getAttribute('id') === symbolId
+    );
+    if (
+      symbol?.parentElement?.childElementCount === 1 &&
+      symbol.parentElement.tagName.toLowerCase() === 'defs'
+    ) {
+      symbol.parentElement.remove();
+      continue;
+    }
+
+    symbol?.remove();
+  }
+
+  const normalized = root.outerHTML;
+  dom.window.close();
+  return normalized;
 }
 
 /**

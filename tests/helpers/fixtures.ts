@@ -3,7 +3,13 @@
  * Provides minimal valid ExcalidrawFile fixtures.
  */
 
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import type { ExcalidrawFile } from '../../src/types/excalidraw.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_ROOT = join(__dirname, '..');
 
 /**
  * Create a minimal ExcalidrawFile with a single rectangle element.
@@ -247,4 +253,12 @@ export function createFileWithBackground(color: string): ExcalidrawFile {
   const file = createMinimalFile();
   file.appState.viewBackgroundColor = color;
   return file;
+}
+
+/**
+ * Load an Excalidraw fixture from the tests/fixtures directory.
+ */
+export function loadExcalidrawFixture(name: string): ExcalidrawFile {
+  const filePath = join(TEST_ROOT, 'fixtures', name);
+  return JSON.parse(readFileSync(filePath, 'utf-8')) as ExcalidrawFile;
 }
