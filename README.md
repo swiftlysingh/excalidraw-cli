@@ -94,14 +94,31 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `[Label @fillStyle:hachure @backgroundColor:#a5d8ff]` | Styled node | Add inline node style attributes |
 | `->` | Arrow | Connection |
 | `-->` | Dashed Arrow | Dashed connection |
-| `-> "text" ->` | Labeled Arrow | Connection with label |
+| `-> "text" ->` | Labeled Arrow | Connection with a double-quoted label |
+| `-> 'text' ->` | Labeled Arrow | Connection with a single-quoted label |
 
 ### Example DSL
 
 ```
 (Start) -> [Enter Credentials] -> {Valid?}
 {Valid?} -> "yes" -> [Dashboard] -> (End)
-{Valid?} -> "no" -> [Show Error] -> [Enter Credentials]
+{Valid?} -> 'no' -> [Show Error] -> [Enter Credentials]
+[API] -> "GET /users?name=\"pp\" \\ cache" -> [Client]
+```
+
+### Edge label escaping
+
+Edge labels must use the fully specified form `[A] -> "label" -> [B]` (or single quotes instead of double quotes).
+Mixed forms like `[A] --> "x" -> [B]` are rejected on purpose, because guessing there is how parsers start doing dumb shit.
+
+Shell escaping tips:
+
+```bash
+# easiest: wrap the whole DSL in single quotes, use double-quoted labels inside
+excalidraw-cli create --inline '[API] -> "GET /users?name=\"pp\"" -> [Client]' -o api.excalidraw
+
+# if the label itself needs apostrophes, flip it
+excalidraw-cli create --inline "[Decision] -> 'team\'s call' -> [Next]" -o decision.excalidraw
 ```
 
 ### Node Styling

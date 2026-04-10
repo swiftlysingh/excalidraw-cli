@@ -46,6 +46,7 @@ interface Token {
   nodeType?: NodeType;
   nodeStyle?: NodeStyle;
   dashed?: boolean;
+  raw?: string;
   // Image-specific properties
   imageSrc?: string;
   imageWidth?: number;
@@ -285,6 +286,44 @@ function createNodeToken(rawLabel: string, nodeType: NodeType): Token {
 /**
  * Tokenize DSL input into tokens
  */
+function parseQuotedLabel(input: string, startIndex: number): { value: string; raw: string; nextIndex: number } {
+  const quote = input[startIndex];
+  let i = startIndex + 1;
+  let value = '';
+
+  while (i < input.length) {
+    const char = input[i];
+
+    if (char === '\\') {
+      if (i + 1 >= input.length) {
+        throw new Error(`Unterminated escape sequence in edge label starting at index ${startIndex}`);
+      }
+
+      const escaped = input[i + 1];
+      if (escaped === quote || escaped === '\\') {
+        value += escaped;
+      } else {
+        value += escaped;
+      }
+      i += 2;
+      continue;
+    }
+
+    if (char === quote) {
+      return {
+        value,
+        raw: input.slice(startIndex, i + 1),
+        nextIndex: i + 1,
+      };
+    }
+
+    value += char;
+    i++;
+  }
+
+  throw new Error(`Unterminated edge label starting at index ${startIndex}`);
+}
+
 function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
@@ -455,21 +494,11 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Quoted label "text"
-    if (input[i] === '"') {
-      i++;
-      let label = '';
-      while (i < len && input[i] !== '"') {
-        if (input[i] === '\\' && i + 1 < len) {
-          i++;
-          label += input[i];
-        } else {
-          label += input[i];
-        }
-        i++;
-      }
-      i++; // skip closing "
-      tokens.push({ type: 'label', value: label });
+    // Quoted label "text" or 'text'
+    if (input[i] === '"' || input[i] === "'") {
+      const parsed = parseQuotedLabel(input, i);
+      tokens.push({ type: 'label', value: parsed.value, raw: parsed.raw });
+      i = parsed.nextIndex;
       continue;
     }
 
@@ -548,6 +577,11 @@ function parseScatterDirective(value: string): ScatterConfig | null {
 export function parseDSL(input: string): FlowchartGraph {
   const { content, nodeStyles } = preprocessNodeStyleBlocks(input);
   const tokens = tokenize(content);
+
+  function formatArrowToken(token: Token | undefined): string {
+    if (!token || token.type !== 'arrow') return '<missing arrow>';
+    return token.value;
+  }
 
   const nodes: Map<string, GraphNode> = new Map();
   const edges: GraphEdge[] = [];
@@ -714,15 +748,37 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     if (token.type === 'arrow') {
+      const nextToken = tokens[i + 1];
+      if (nextToken?.type === 'label') {
+        const trailingArrow = tokens[i + 2];
+        const targetNodeToken = tokens[i + 3];
+
+        if (token.value !== '->' || trailingArrow?.type !== 'arrow' || trailingArrow.value !== '->') {
+          const rawLabel = nextToken.raw ?? JSON.stringify(nextToken.value);
+          throw new Error(
+            `Invalid labeled edge syntax around ${rawLabel}: expected [A] -> ${rawLabel} -> [B], got ${formatArrowToken(token)} ${rawLabel} ${formatArrowToken(trailingArrow)}`
+          );
+        }
+
+        if (!targetNodeToken || (targetNodeToken.type !== 'node' && targetNodeToken.type !== 'image')) {
+          const rawLabel = nextToken.raw ?? JSON.stringify(nextToken.value);
+          throw new Error(`Invalid labeled edge syntax around ${rawLabel}: missing target node after label`);
+        }
+
+        pendingDashed = false;
+        pendingLabel = nextToken.value;
+        i += 3;
+        continue;
+      }
+
       pendingDashed = token.dashed || false;
       i++;
       continue;
     }
 
     if (token.type === 'label') {
-      pendingLabel = token.value;
-      i++;
-      continue;
+      const rawLabel = token.raw ?? JSON.stringify(token.value);
+      throw new Error(`Edge label ${rawLabel} must appear between arrows as [A] -> ${rawLabel} -> [B]`);
     }
 
     i++;
