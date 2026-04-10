@@ -25,7 +25,9 @@ function mapEdgeStyle(style?: EdgeStyle): Partial<ExcalidrawArrow> {
   if (style.strokeStyle !== undefined) result.strokeStyle = style.strokeStyle;
   if (style.roughness !== undefined) result.roughness = style.roughness;
   result.startArrowhead = style.startArrowhead ?? null;
-  result.endArrowhead = style.endArrowhead ?? 'arrow';
+  result.endArrowhead = Object.prototype.hasOwnProperty.call(style, 'endArrowhead')
+    ? style.endArrowhead
+    : 'arrow';
   return result;
 }
 
@@ -75,8 +77,12 @@ export function createArrow(
     lastCommittedPoint: null,
     startBinding: startBindingInfo.binding,
     endBinding: endBindingInfo.binding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: Object.prototype.hasOwnProperty.call(styleProps, 'startArrowhead')
+      ? styleProps.startArrowhead!
+      : null,
+    endArrowhead: Object.prototype.hasOwnProperty.call(styleProps, 'endArrowhead')
+      ? styleProps.endArrowhead!
+      : 'arrow',
     elbowed: false,
   } as ExcalidrawArrow;
 }
@@ -120,8 +126,12 @@ export function createArrowWithBindings(
     lastCommittedPoint: null,
     startBinding,
     endBinding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: Object.prototype.hasOwnProperty.call(styleProps, 'startArrowhead')
+      ? styleProps.startArrowhead!
+      : null,
+    endArrowhead: Object.prototype.hasOwnProperty.call(styleProps, 'endArrowhead')
+      ? styleProps.endArrowhead!
+      : 'arrow',
     elbowed: false,
   } as ExcalidrawArrow;
 }
