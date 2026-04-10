@@ -31,7 +31,11 @@ Requires `Node >=20.19.0`. Node 18 is no longer supported.
 ### Using npm
 
 ```bash
-npm i @swiftlysingh/excalidraw-cli
+npm install -g @swiftlysingh/excalidraw-cli
+
+# or install via Homebrew
+brew tap swiftlysingh/tap
+brew install excalidraw-cli
 ```
 
 ### From Source (Local Development)

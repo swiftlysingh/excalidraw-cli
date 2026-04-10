@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (for example v1.3.0)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve release tag
+        id: release_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.release_tag.outputs.tag }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Verify tag matches package version
+        id: version_check
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
+          ACTUAL_TAG="${{ steps.release_tag.outputs.tag }}"
+
+          echo "package_version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+          if [ "$ACTUAL_TAG" != "$EXPECTED_TAG" ]; then
+            echo "Tag mismatch: expected $EXPECTED_TAG, got $ACTUAL_TAG" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: ${{ steps.release_tag.outputs.tag }}
+          generate_release_notes: true
+          body: |
+            ## Installation
+            ```bash
+            npm install -g @swiftlysingh/excalidraw-cli
+            brew tap swiftlysingh/tap
+            brew install excalidraw-cli
+            ```
+
+            📦 [View on npm](https://www.npmjs.com/package/@swiftlysingh/excalidraw-cli/v/${{ steps.version_check.outputs.package_version }})
+
+      - name: Compute release artifact SHA256
+        id: asset
+        run: |
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${{ steps.release_tag.outputs.tag }}.tar.gz"
+          curl -L "$TARBALL_URL" -o release.tar.gz
+          SHA256=$(sha256sum release.tar.gz | awk '{print $1}')
+          echo "tarball_url=$TARBALL_URL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Homebrew formula
+        run: |
+          mkdir -p Formula
+          cat > Formula/excalidraw-cli.rb <<EOF
+          class ExcalidrawCli < Formula
+            desc "CLI for creating Excalidraw flowcharts programmatically"
+            homepage "https://github.com/${{ github.repository }}"
+            url "${{ steps.asset.outputs.tarball_url }}"
+            sha256 "${{ steps.asset.outputs.sha256 }}"
+            license "MIT"
+
+            depends_on "node"
+
+            def install
+              system "npm", "install", *std_npm_args
+              man1.install "man/excalidraw-cli.1"
+            end
+          end
+          EOF
+
+      - name: Push Homebrew formula to tap
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/swiftlysingh/homebrew-tap.git" homebrew-tap
+          cp Formula/excalidraw-cli.rb homebrew-tap/Formula/excalidraw-cli.rb
+
+          cd homebrew-tap
+          git add Formula/excalidraw-cli.rb
+          if git diff --cached --quiet; then
+            echo "No Homebrew formula changes to commit"
+            exit 0
+          fi
+          git commit -m "Update excalidraw-cli formula for ${{ steps.release_tag.outputs.tag }}"
+          git push origin main
