@@ -65,6 +65,18 @@ describe('DSL Parser', () => {
       expect(result.nodes[0].label).toBe('email@company.com');
       expect(result.nodes[0].style).toBeUndefined();
     });
+
+    it('should generate Excalidraw arrows for reverse and bidirectional connections', async () => {
+      const graph = parseDSL(`[A] <- [B]
+[C] <-> [D]`);
+      const layouted = await layoutGraph(graph);
+      const file = generateExcalidraw(layouted);
+      const arrows = file.elements.filter((element) => element.type === 'arrow');
+
+      expect(arrows).toHaveLength(2);
+      expect(arrows[0]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: null });
+      expect(arrows[1]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: 'arrow' });
+    });
   });
 
   describe('connection parsing', () => {
@@ -84,6 +96,28 @@ describe('DSL Parser', () => {
     it('should parse dashed connections', () => {
       const result = parseDSL('[A] --> [B]');
       expect(result.edges[0].style?.strokeStyle).toBe('dashed');
+    });
+
+    it('should parse reverse connections as logical right-to-left edges', () => {
+      const result = parseDSL('[A] <- [B]');
+      expect(result.edges).toHaveLength(1);
+      expect(result.edges[0].source).toBe(result.nodes[1].id);
+      expect(result.edges[0].target).toBe(result.nodes[0].id);
+      expect(result.edges[0].style).toEqual({
+        startArrowhead: 'arrow',
+        endArrowhead: null,
+      });
+    });
+
+    it('should parse bidirectional connections with arrowheads on both ends', () => {
+      const result = parseDSL('[A] <-> [B]');
+      expect(result.edges).toHaveLength(1);
+      expect(result.edges[0].source).toBe(result.nodes[0].id);
+      expect(result.edges[0].target).toBe(result.nodes[1].id);
+      expect(result.edges[0].style).toEqual({
+        startArrowhead: 'arrow',
+        endArrowhead: 'arrow',
+      });
     });
 
     it('should parse chains of connections', () => {

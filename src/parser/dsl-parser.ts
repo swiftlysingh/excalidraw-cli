@@ -46,6 +46,8 @@ interface Token {
   nodeType?: NodeType;
   nodeStyle?: NodeStyle;
   dashed?: boolean;
+  reversed?: boolean;
+  bidirectional?: boolean;
   // Image-specific properties
   imageSrc?: string;
   imageWidth?: number;
@@ -441,6 +443,20 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
+    // Bidirectional arrow <->
+    if (input[i] === '<' && input[i + 1] === '-' && input[i + 2] === '>') {
+      tokens.push({ type: 'arrow', value: '<->', bidirectional: true });
+      i += 3;
+      continue;
+    }
+
+    // Reverse arrow <-
+    if (input[i] === '<' && input[i + 1] === '-') {
+      tokens.push({ type: 'arrow', value: '<-', reversed: true });
+      i += 2;
+      continue;
+    }
+
     // Dashed arrow -->
     if (input[i] === '-' && input[i + 1] === '-' && input[i + 2] === '>') {
       tokens.push({ type: 'arrow', value: '-->', dashed: true });
@@ -592,6 +608,32 @@ export function parseDSL(input: string): FlowchartGraph {
   let lastNode: GraphNode | null = null;
   let pendingLabel: string | null = null;
   let pendingDashed = false;
+  let pendingReversed = false;
+  let pendingBidirectional = false;
+
+  function createPendingEdge(sourceNode: GraphNode, targetNode: GraphNode): void {
+    const style = {
+      ...(pendingDashed ? { strokeStyle: 'dashed' as const } : {}),
+      ...(pendingBidirectional
+        ? { startArrowhead: 'arrow' as const, endArrowhead: 'arrow' as const }
+        : pendingReversed
+          ? { startArrowhead: 'arrow' as const, endArrowhead: null }
+          : {}),
+    };
+
+    edges.push({
+      id: nanoid(10),
+      source: pendingReversed ? targetNode.id : sourceNode.id,
+      target: pendingReversed ? sourceNode.id : targetNode.id,
+      label: pendingLabel || undefined,
+      style: Object.keys(style).length > 0 ? style : undefined,
+    });
+
+    pendingLabel = null;
+    pendingDashed = false;
+    pendingReversed = false;
+    pendingBidirectional = false;
+  }
 
   while (i < tokens.length) {
     const token = tokens[i];
@@ -600,6 +642,8 @@ export function parseDSL(input: string): FlowchartGraph {
       lastNode = null;
       pendingLabel = null;
       pendingDashed = false;
+      pendingReversed = false;
+      pendingBidirectional = false;
       i++;
       continue;
     }
@@ -661,15 +705,7 @@ export function parseDSL(input: string): FlowchartGraph {
       const node = getOrCreateNode(token.value, 'image', imageData);
 
       if (lastNode) {
-        edges.push({
-          id: nanoid(10),
-          source: lastNode.id,
-          target: node.id,
-          label: pendingLabel || undefined,
-          style: pendingDashed ? { strokeStyle: 'dashed' } : undefined,
-        });
-        pendingLabel = null;
-        pendingDashed = false;
+        createPendingEdge(lastNode, node);
       }
 
       lastNode = node;
@@ -696,16 +732,7 @@ export function parseDSL(input: string): FlowchartGraph {
       const node = getOrCreateNode(token.value, token.nodeType!, undefined, token.nodeStyle);
 
       if (lastNode) {
-        // Create edge from lastNode to this node
-        edges.push({
-          id: nanoid(10),
-          source: lastNode.id,
-          target: node.id,
-          label: pendingLabel || undefined,
-          style: pendingDashed ? { strokeStyle: 'dashed' } : undefined,
-        });
-        pendingLabel = null;
-        pendingDashed = false;
+        createPendingEdge(lastNode, node);
       }
 
       lastNode = node;
@@ -715,6 +742,8 @@ export function parseDSL(input: string): FlowchartGraph {
 
     if (token.type === 'arrow') {
       pendingDashed = token.dashed || false;
+      pendingReversed = token.reversed || false;
+      pendingBidirectional = token.bidirectional || false;
       i++;
       continue;
     }
