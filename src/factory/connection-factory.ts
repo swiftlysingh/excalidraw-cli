@@ -24,8 +24,8 @@ function mapEdgeStyle(style?: EdgeStyle): Partial<ExcalidrawArrow> {
   if (style.strokeWidth !== undefined) result.strokeWidth = style.strokeWidth;
   if (style.strokeStyle !== undefined) result.strokeStyle = style.strokeStyle;
   if (style.roughness !== undefined) result.roughness = style.roughness;
-  result.startArrowhead = style.startArrowhead ?? null;
-  result.endArrowhead = style.endArrowhead ?? 'arrow';
+  if (style.startArrowhead !== undefined) result.startArrowhead = style.startArrowhead;
+  if (style.endArrowhead !== undefined) result.endArrowhead = style.endArrowhead;
   return result;
 }
 
@@ -75,8 +75,8 @@ export function createArrow(
     lastCommittedPoint: null,
     startBinding: startBindingInfo.binding,
     endBinding: endBindingInfo.binding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: styleProps.startArrowhead !== undefined ? styleProps.startArrowhead : null,
+    endArrowhead: styleProps.endArrowhead !== undefined ? styleProps.endArrowhead : 'arrow',
     elbowed: false,
   } as ExcalidrawArrow;
 }
@@ -120,8 +120,8 @@ export function createArrowWithBindings(
     lastCommittedPoint: null,
     startBinding,
     endBinding,
-    startArrowhead: styleProps.startArrowhead ?? null,
-    endArrowhead: styleProps.endArrowhead ?? 'arrow',
+    startArrowhead: styleProps.startArrowhead !== undefined ? styleProps.startArrowhead : null,
+    endArrowhead: styleProps.endArrowhead !== undefined ? styleProps.endArrowhead : 'arrow',
     elbowed: false,
   } as ExcalidrawArrow;
 }
