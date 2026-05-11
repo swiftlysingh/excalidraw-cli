@@ -92,7 +92,9 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `(Label)` | Ellipse | Start/End points |
 | `[[Label]]` | Database | Data storage |
 | `[Label @fillStyle:hachure @backgroundColor:#a5d8ff]` | Styled node | Add inline node style attributes |
-| `->` | Arrow | Connection |
+| `->` | Arrow | Forward connection |
+| `<-` | Reverse Arrow | Reverse connection, logically parsed as right-to-left |
+| `<->` | Bidirectional Arrow | Connection with arrowheads on both ends |
 | `-->` | Dashed Arrow | Dashed connection |
 | `-> "text" ->` | Labeled Arrow | Connection with label |
 
@@ -102,6 +104,8 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 (Start) -> [Enter Credentials] -> {Valid?}
 {Valid?} -> "yes" -> [Dashboard] -> (End)
 {Valid?} -> "no" -> [Show Error] -> [Enter Credentials]
+[Reviewer] <- [Approved]
+[Client] <-> [API]
 ```
 
 ### Node Styling
