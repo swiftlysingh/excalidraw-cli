@@ -92,7 +92,9 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `(Label)` | Ellipse | Start/End points |
 | `[[Label]]` | Database | Data storage |
 | `[Label @fillStyle:hachure @backgroundColor:#a5d8ff]` | Styled node | Add inline node style attributes |
-| `->` | Arrow | Connection |
+| `->` | Arrow | Forward connection |
+| `<-` | Reverse Arrow | Reverse connection, logically parsed as right-to-left |
+| `<->` | Bidirectional Arrow | Connection with arrowheads on both ends |
 | `-->` | Dashed Arrow | Dashed connection |
 | `-> "text" ->` | Labeled Arrow | Connection with a double-quoted label |
 | `-> 'text' ->` | Labeled Arrow | Connection with a single-quoted label |
@@ -104,12 +106,14 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 {Valid?} -> "yes" -> [Dashboard] -> (End)
 {Valid?} -> 'no' -> [Show Error] -> [Enter Credentials]
 [API] -> "GET /users?name=\"pp\" \\ cache" -> [Client]
+[Reviewer] <- [Approved]
+[Client] <-> [API]
 ```
 
 ### Edge label escaping
 
 Edge labels must use the fully specified form `[A] -> "label" -> [B]` (or single quotes instead of double quotes).
-Mixed forms like `[A] --> "x" -> [B]` are rejected on purpose, because guessing there is how parsers start doing dumb shit.
+Mixed forms like `[A] --> "x" -> [B]` are rejected because they are ambiguous.
 
 Shell escaping tips:
 

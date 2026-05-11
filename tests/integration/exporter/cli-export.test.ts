@@ -120,6 +120,25 @@ describe('CLI export command', () => {
       expect(existsSync(autoSvg)).toBe(true);
     }, 60000);
 
+    it('should preserve reverse and bidirectional arrowheads through CLI create output', () => {
+      const outputFile = tmpFile('arrow-directions.excalidraw');
+
+      runCLI([
+        'create',
+        '--inline',
+        '[A] <- [B]\n[C] <-> [D]',
+        '-o',
+        outputFile,
+      ]);
+
+      const file = JSON.parse(readFileSync(outputFile, 'utf-8'));
+      const arrows = file.elements.filter((element: { type: string }) => element.type === 'arrow');
+
+      expect(arrows).toHaveLength(2);
+      expect(arrows[0]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: null });
+      expect(arrows[1]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: 'arrow' });
+    }, 60000);
+
     it('should export with --verbose flag', () => {
       const inputFile = tmpFile('verbose-test.excalidraw');
       writeFileSync(inputFile, JSON.stringify(createMinimalFile()), 'utf-8');
