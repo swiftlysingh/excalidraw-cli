@@ -132,7 +132,49 @@ describe('DSL Parser', () => {
 
     it('should parse dashed connections', () => {
       const result = parseDSL('[A] --> [B]');
-      expect(result.edges[0].style?.strokeStyle).toBe('dashed');
+      expect(result.edges[0].source).toBe(result.nodes[0].id);
+      expect(result.edges[0].target).toBe(result.nodes[1].id);
+      expect(result.edges[0].style).toEqual({ strokeStyle: 'dashed' });
+    });
+
+    it('should parse dashed reverse connections', () => {
+      const result = parseDSL('[A] <-- [B]');
+      expect(result.edges[0].source).toBe(result.nodes[1].id);
+      expect(result.edges[0].target).toBe(result.nodes[0].id);
+      expect(result.edges[0].style).toEqual({
+        strokeStyle: 'dashed',
+        startArrowhead: 'arrow',
+        endArrowhead: null,
+      });
+    });
+
+    it('should parse dashed bidirectional connections', () => {
+      const result = parseDSL('[A] <--> [B]');
+      expect(result.edges[0].source).toBe(result.nodes[0].id);
+      expect(result.edges[0].target).toBe(result.nodes[1].id);
+      expect(result.edges[0].style).toEqual({
+        strokeStyle: 'dashed',
+        startArrowhead: 'arrow',
+        endArrowhead: 'arrow',
+      });
+    });
+
+    it('should preserve solid reverse and bidirectional semantics', () => {
+      const reverse = parseDSL('[A] <- [B]');
+      expect(reverse.edges[0].source).toBe(reverse.nodes[1].id);
+      expect(reverse.edges[0].target).toBe(reverse.nodes[0].id);
+      expect(reverse.edges[0].style).toEqual({
+        startArrowhead: 'arrow',
+        endArrowhead: null,
+      });
+
+      const bidirectional = parseDSL('[A] <-> [B]');
+      expect(bidirectional.edges[0].source).toBe(bidirectional.nodes[0].id);
+      expect(bidirectional.edges[0].target).toBe(bidirectional.nodes[1].id);
+      expect(bidirectional.edges[0].style).toEqual({
+        startArrowhead: 'arrow',
+        endArrowhead: 'arrow',
+      });
     });
 
     it('should parse reverse connections as logical right-to-left edges', () => {
@@ -382,6 +424,36 @@ describe('DSL Parser', () => {
       expect(shape).toMatchObject({
         fillStyle: 'hachure',
         backgroundColor: '#a5d8ff',
+      });
+    });
+
+    it('should generate dashed reverse arrows with dashed styling and reversed arrowheads', async () => {
+      const graph = parseDSL('[A] <-- [B]');
+      const layoutedGraph = await layoutGraph(graph);
+      const excalidrawFile = generateExcalidraw(layoutedGraph);
+      const arrow = excalidrawFile.elements.find(
+        (element) => element.type === 'arrow' && element.id === graph.edges[0].id
+      );
+
+      expect(arrow).toMatchObject({
+        strokeStyle: 'dashed',
+        startArrowhead: 'arrow',
+        endArrowhead: null,
+      });
+    });
+
+    it('should generate dashed bidirectional arrows with arrowheads on both ends', async () => {
+      const graph = parseDSL('[A] <--> [B]');
+      const layoutedGraph = await layoutGraph(graph);
+      const excalidrawFile = generateExcalidraw(layoutedGraph);
+      const arrow = excalidrawFile.elements.find(
+        (element) => element.type === 'arrow' && element.id === graph.edges[0].id
+      );
+
+      expect(arrow).toMatchObject({
+        strokeStyle: 'dashed',
+        startArrowhead: 'arrow',
+        endArrowhead: 'arrow',
       });
     });
   });

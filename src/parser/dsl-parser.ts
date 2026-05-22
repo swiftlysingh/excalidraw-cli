@@ -482,6 +482,25 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
+    // Dashed bidirectional arrow <-->
+    if (
+      input[i] === '<' &&
+      input[i + 1] === '-' &&
+      input[i + 2] === '-' &&
+      input[i + 3] === '>'
+    ) {
+      tokens.push({ type: 'arrow', value: '<-->', dashed: true, bidirectional: true });
+      i += 4;
+      continue;
+    }
+
+    // Dashed reverse arrow <--
+    if (input[i] === '<' && input[i + 1] === '-' && input[i + 2] === '-') {
+      tokens.push({ type: 'arrow', value: '<--', dashed: true, reversed: true });
+      i += 3;
+      continue;
+    }
+
     // Bidirectional arrow <->
     if (input[i] === '<' && input[i + 1] === '-' && input[i + 2] === '>') {
       tokens.push({ type: 'arrow', value: '<->', bidirectional: true });

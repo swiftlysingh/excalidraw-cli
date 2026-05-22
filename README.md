@@ -98,6 +98,8 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `-->` | Dashed Arrow | Dashed connection |
 | `-> "text" ->` | Labeled Arrow | Connection with a double-quoted label |
 | `-> 'text' ->` | Labeled Arrow | Connection with a single-quoted label |
+| `<--` | Dashed Reverse Arrow | Dashed reversed connection |
+| `<-->` | Dashed Bidirectional Arrow | Dashed connection with arrowheads on both ends |
 
 ### Example DSL
 
@@ -106,6 +108,9 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 {Valid?} -> "yes" -> [Dashboard] -> (End)
 {Valid?} -> 'no' -> [Show Error] -> [Enter Credentials]
 [API] -> "GET /users?name=\"pp\" \\ cache" -> [Client]
+[Client] --> [Webhook]
+[Worker] <-- [Queue]
+[Service A] <--> [Service B]
 [Reviewer] <- [Approved]
 [Client] <-> [API]
 ```
