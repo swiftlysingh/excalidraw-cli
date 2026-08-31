@@ -118,6 +118,7 @@ describe('DOT Parser', () => {
       const result = parseDOT('graph { A -- B; }');
       expect(result.nodes).toHaveLength(2);
       expect(result.edges).toHaveLength(1);
+      expect(result.edges[0].style).toEqual({ endArrowhead: null });
     });
   });
 
@@ -301,4 +302,3 @@ describe('DOT Parser', () => {
     });
   });
 });
-

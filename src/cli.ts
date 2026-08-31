@@ -23,7 +23,7 @@ const program = new Command();
 program
   .name('excalidraw-cli')
   .description('Create Excalidraw flowcharts from DSL, JSON, or DOT')
-  .version('1.2.0');
+  .version('1.3.0');
 
 /**
  * Create command - main flowchart creation
@@ -37,7 +37,7 @@ program
   .option('--inline <input>', 'Inline DSL, JSON, or DOT string')
   .option('--stdin', 'Read input from stdin')
   .option('-d, --direction <dir>', 'Flow direction: TB, BT, LR, RL (default: TB)')
-  .option('-s, --spacing <n>', 'Node spacing in pixels', '50')
+  .option('-s, --spacing <n>', 'Node spacing in pixels')
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options, command) => {
     try {
@@ -71,6 +71,10 @@ program
         console.log(`Input length: ${input.length} characters`);
       }
 
+      if (!['dsl', 'json', 'dot'].includes(format)) {
+        throw new Error('--format must be "dsl", "json", or "dot"');
+      }
+
       // Parse input
       let graph: FlowchartGraph;
       if (format === 'json') {
@@ -84,15 +88,17 @@ program
       // Apply CLI options
       if (options.direction) {
         const dir = options.direction.toUpperCase() as FlowDirection;
-        if (['TB', 'BT', 'LR', 'RL'].includes(dir)) {
-          graph.options.direction = dir;
+        if (!['TB', 'BT', 'LR', 'RL'].includes(dir)) {
+          throw new Error('--direction must be "TB", "BT", "LR", or "RL"');
         }
+        graph.options.direction = dir;
       }
-      if (options.spacing) {
-        const spacing = parseInt(options.spacing, 10);
-        if (!isNaN(spacing)) {
-          graph.options.nodeSpacing = spacing;
+      if (options.spacing !== undefined) {
+        const spacing = Number(options.spacing);
+        if (!Number.isSafeInteger(spacing) || spacing < 0) {
+          throw new Error('--spacing must be a non-negative integer');
         }
+        graph.options.nodeSpacing = spacing;
       }
 
       if (options.verbose) {
@@ -145,6 +151,10 @@ program
         } else if (inputFile.endsWith('.dot') || inputFile.endsWith('.gv')) {
           format = 'dot';
         }
+      }
+
+      if (!['dsl', 'json', 'dot'].includes(format)) {
+        throw new Error('--format must be "dsl", "json", or "dot"');
       }
 
       // Parse input

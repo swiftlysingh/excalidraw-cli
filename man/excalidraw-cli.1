@@ -1,4 +1,4 @@
-.TH EXCALIDRAW-CLI 1 "March 2026" "excalidraw-cli 1.2.0" "User Commands"
+.TH EXCALIDRAW-CLI 1 "August 2026" "excalidraw-cli 1.3.0" "User Commands"
 .SH NAME
 excalidraw-cli \- create Excalidraw diagrams from DSL, JSON, or Graphviz DOT
 .SH SYNOPSIS
@@ -9,6 +9,10 @@ excalidraw-cli \- create Excalidraw diagrams from DSL, JSON, or Graphviz DOT
 .B excalidraw-cli
 .B create
 .RI [ options ] " [input]"
+.br
+.B excalidraw-cli
+.B convert
+.RI [ options ] " <input>"
 .br
 .B excalidraw-cli
 .B parse
@@ -27,6 +31,8 @@ The
 .B create
 command accepts DSL, JSON, or Graphviz DOT from an inline string, standard
 input, or a file. The
+.B convert
+command exports an existing Excalidraw document to SVG or PNG. The
 .B parse
 command reads a file, validates it, and prints a summary of the parsed graph
 without generating Excalidraw output.
@@ -34,6 +40,9 @@ without generating Excalidraw output.
 .TP
 .B create
 Read input, parse it, apply layout, and write Excalidraw JSON.
+.TP
+.B convert
+Export an Excalidraw document to SVG or PNG.
 .TP
 .B parse
 Read and validate an input file and print nodes, edges, and direction.
@@ -96,6 +105,42 @@ options.
 .TP
 .BR \-\-verbose
 Print basic parse and layout progress information.
+.SS "convert options"
+.TP
+.BR \-\-format " " <format>
+Required output format. Supported values are
+.BR svg
+and
+.BR png .
+.TP
+.BR \-o ", " \-\-output " " <file>
+Write the exported image to
+.IR file .
+The default replaces the input file extension with the output format.
+.TP
+.BR \-\-export-background ", " \-\-no-export-background
+Include or exclude the scene background.
+.TP
+.BR \-\-background-color " " <color>
+Set the export background color. The default is
+.BR #ffffff .
+.TP
+.BR \-\-dark
+Export with the dark theme.
+.TP
+.BR \-\-embed-scene
+Embed the Excalidraw scene in the exported image.
+.TP
+.BR \-\-padding " " <n>
+Set padding around the content in pixels. The default is
+.BR 10 .
+.TP
+.BR \-\-scale " " <n>
+Set the PNG output scale. The default is
+.BR 1 .
+.TP
+.BR \-\-verbose
+Print export progress information.
 .SS "parse options"
 .TP
 .BR \-f ", " \-\-format " " <type>
@@ -397,6 +442,14 @@ the command prints
 .B parse
 prints a human-readable summary containing node count, edge count, direction,
 then the parsed node and edge list.
+.P
+.B convert
+writes an SVG or PNG image. If
+.B \-\-output
+is omitted, it replaces the input file extension with
+.B .svg
+or
+.BR .png .
 .SH DIAGNOSTICS
 The commands exit with status 1 on parse errors, missing input, file read
 failures, or generation failures.
@@ -422,6 +475,9 @@ excalidraw-cli create flowchart.dsl -o -
 .TP
 .B Parse a DOT file
 excalidraw-cli parse graph.dot --format dot
+.TP
+.B Export an Excalidraw document to PNG
+excalidraw-cli convert diagram.excalidraw --format png --scale 2
 .TP
 .B Show command help
 excalidraw-cli help create

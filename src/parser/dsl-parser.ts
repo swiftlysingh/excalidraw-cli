@@ -332,8 +332,13 @@ function tokenize(input: string): Token[] {
   const len = input.length;
 
   while (i < len) {
+    if (i === 0 && input[i] === '\uFEFF') {
+      i++;
+      continue;
+    }
+
     // Skip whitespace (except newlines)
-    if (input[i] === ' ' || input[i] === '\t') {
+    if (input[i] === ' ' || input[i] === '\t' || input[i] === '\r') {
       i++;
       continue;
     }
@@ -537,8 +542,7 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Skip unknown characters
-    i++;
+    throw new Error(`Unexpected character ${JSON.stringify(input[i])} at index ${i}`);
   }
 
   return tokens;
@@ -660,6 +664,7 @@ export function parseDSL(input: string): FlowchartGraph {
   let i = 0;
   let lastNode: GraphNode | null = null;
   let pendingLabel: string | null = null;
+  let pendingArrow: Token | null = null;
   let pendingDashed = false;
   let pendingReversed = false;
   let pendingBidirectional = false;
@@ -669,9 +674,7 @@ export function parseDSL(input: string): FlowchartGraph {
       ...(pendingDashed ? { strokeStyle: 'dashed' as const } : {}),
       ...(pendingBidirectional
         ? { startArrowhead: 'arrow' as const, endArrowhead: 'arrow' as const }
-        : pendingReversed
-          ? { startArrowhead: 'arrow' as const, endArrowhead: null }
-          : {}),
+        : {}),
     };
 
     edges.push({
@@ -683,6 +686,7 @@ export function parseDSL(input: string): FlowchartGraph {
     });
 
     pendingLabel = null;
+    pendingArrow = null;
     pendingDashed = false;
     pendingReversed = false;
     pendingBidirectional = false;
@@ -692,6 +696,9 @@ export function parseDSL(input: string): FlowchartGraph {
     const token = tokens[i];
 
     if (token.type === 'newline') {
+      if (pendingArrow) {
+        throw new Error(`Dangling arrow ${pendingArrow.value}: missing target node`);
+      }
       lastNode = null;
       pendingLabel = null;
       pendingDashed = false;
@@ -743,6 +750,8 @@ export function parseDSL(input: string): FlowchartGraph {
             });
           }
         }
+      } else {
+        throw new Error(`Unknown directive @${directive}`);
       }
       i++;
       continue;
@@ -758,6 +767,11 @@ export function parseDSL(input: string): FlowchartGraph {
       const node = getOrCreateNode(token.value, 'image', imageData);
 
       if (lastNode) {
+        if (!pendingArrow) {
+          throw new Error(
+            `Adjacent nodes ${JSON.stringify(lastNode.label)} and ${JSON.stringify(node.label)} require an arrow`
+          );
+        }
         createPendingEdge(lastNode, node);
       }
 
@@ -785,6 +799,11 @@ export function parseDSL(input: string): FlowchartGraph {
       const node = getOrCreateNode(token.value, token.nodeType!, undefined, token.nodeStyle);
 
       if (lastNode) {
+        if (!pendingArrow) {
+          throw new Error(
+            `Adjacent nodes ${JSON.stringify(lastNode.label)} and ${JSON.stringify(node.label)} require an arrow`
+          );
+        }
         createPendingEdge(lastNode, node);
       }
 
@@ -794,6 +813,15 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     if (token.type === 'arrow') {
+      if (!lastNode) {
+        throw new Error(`Unexpected arrow ${token.value}: missing source node`);
+      }
+      if (pendingArrow) {
+        throw new Error(
+          `Unexpected arrow ${token.value}: missing target node after ${pendingArrow.value}`
+        );
+      }
+
       const nextToken = tokens[i + 1];
       if (nextToken?.type === 'label') {
         const trailingArrow = tokens[i + 2];
@@ -813,6 +841,7 @@ export function parseDSL(input: string): FlowchartGraph {
 
         pendingDashed = false;
         pendingLabel = nextToken.value;
+        pendingArrow = token;
         i += 3;
         continue;
       }
@@ -820,6 +849,7 @@ export function parseDSL(input: string): FlowchartGraph {
       pendingDashed = token.dashed || false;
       pendingReversed = token.reversed || false;
       pendingBidirectional = token.bidirectional || false;
+      pendingArrow = token;
       i++;
       continue;
     }
@@ -830,6 +860,10 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     i++;
+  }
+
+  if (pendingArrow) {
+    throw new Error(`Dangling arrow ${pendingArrow.value}: missing target node`);
   }
 
   const result: FlowchartGraph = {

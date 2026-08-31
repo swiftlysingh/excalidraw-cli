@@ -26,7 +26,7 @@
 
 ## Installation
 
-Requires `Node >=20.19.0`. Node 18 is no longer supported.
+Version 1.3.0 requires `Node >=20.19.0`. Node 18 is no longer supported.
 
 ### Using npm
 

@@ -135,7 +135,7 @@ describe('CLI export command', () => {
       const arrows = file.elements.filter((element: { type: string }) => element.type === 'arrow');
 
       expect(arrows).toHaveLength(2);
-      expect(arrows[0]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: null });
+      expect(arrows[0]).toMatchObject({ startArrowhead: null, endArrowhead: 'arrow' });
       expect(arrows[1]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: 'arrow' });
     }, 60000);
 

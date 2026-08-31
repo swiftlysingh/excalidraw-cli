@@ -108,6 +108,8 @@ jobs:
             depends_on "node"
 
             def install
+              system "npm", "ci"
+              system "npm", "run", "build"
               system "npm", "install", *std_npm_args
               man1.install "man/excalidraw-cli.1"
             end
