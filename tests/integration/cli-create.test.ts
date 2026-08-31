@@ -83,6 +83,7 @@ describe('CLI create options', () => {
     [['create', '--inline', '[A]', '--format', 'yaml'], '--format must be'],
     [['parse', 'package.json', '--format', 'yaml'], '--format must be'],
     [['create', '--inline', '[A]', '--direction', 'sideways'], '--direction must be'],
+    [['create', '--inline', '[A]', '--spacing', '   '], '--spacing must be'],
     [['create', '--inline', '[A]', '--spacing', '12px'], '--spacing must be'],
     [['create', '--inline', '[A]', '--spacing', '-1'], '--spacing must be'],
   ])('rejects invalid options: %j', (args, message) => {

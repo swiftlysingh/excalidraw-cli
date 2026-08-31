@@ -159,7 +159,9 @@ describe('edge cases and error handling', () => {
         height: markup.match(/height="([^"]+)"/)?.[1],
       });
 
-      expect(bounds(svg)).toEqual(bounds(baselineSvg));
+      const baselineBounds = bounds(baselineSvg);
+      expect(Object.values(baselineBounds)).not.toContain(undefined);
+      expect(bounds(svg)).toEqual(baselineBounds);
     }, 30000);
   });
 

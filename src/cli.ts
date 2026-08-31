@@ -97,6 +97,9 @@ program
         graph.options.direction = dir;
       }
       if (options.spacing !== undefined) {
+        if (options.spacing.trim() === '') {
+          throw new Error('--spacing must be a non-negative integer');
+        }
         const spacing = Number(options.spacing);
         if (!Number.isSafeInteger(spacing) || spacing < 0) {
           throw new Error('--spacing must be a non-negative integer');
