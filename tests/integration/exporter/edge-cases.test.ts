@@ -143,6 +143,7 @@ describe('edge cases and error handling', () => {
   describe('file with deleted elements', () => {
     it('should exclude deleted elements from the exported bounds', async () => {
       const file = createMinimalFile();
+      const baselineSvg = await convertToSVG(file);
       file.elements.push({
         ...file.elements[0],
         id: 'deleted-distant-rect',
@@ -152,9 +153,13 @@ describe('edge cases and error handling', () => {
       });
 
       const svg = await convertToSVG(file);
+      const bounds = (markup: string) => ({
+        viewBox: markup.match(/viewBox="([^"]+)"/)?.[1],
+        width: markup.match(/width="([^"]+)"/)?.[1],
+        height: markup.match(/height="([^"]+)"/)?.[1],
+      });
 
-      expect(svg).toContain('viewBox="0 0 220 120"');
-      expect(svg).toContain('width="220" height="120"');
+      expect(bounds(svg)).toEqual(bounds(baselineSvg));
     }, 30000);
   });
 

@@ -19,11 +19,14 @@ import type { ExcalidrawFile } from './types/excalidraw.js';
 import type { FlowchartGraph, FlowDirection } from './types/dsl.js';
 
 const program = new Command();
+const packageMetadata = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+) as { version: string };
 
 program
   .name('excalidraw-cli')
   .description('Create Excalidraw flowcharts from DSL, JSON, or DOT')
-  .version('1.3.0');
+  .version(packageMetadata.version);
 
 /**
  * Create command - main flowchart creation

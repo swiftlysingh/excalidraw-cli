@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CLI_PATH = join(PROJECT_ROOT, 'dist', 'cli.js');
+const PACKAGE_VERSION = (
+  JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8')) as { version: string }
+).version;
 
 function runCLI(args: string[]) {
   const result = spawnSync(process.execPath, [CLI_PATH, ...args], {
@@ -28,7 +32,7 @@ describe('CLI create options', () => {
     const result = runCLI(['--version']);
 
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('1.3.0');
+    expect(result.stdout.trim()).toBe(PACKAGE_VERSION);
   });
 
   it('preserves input spacing unless --spacing is supplied', () => {
