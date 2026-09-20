@@ -139,3 +139,39 @@ describe('Homebrew formula generation', () => {
     expect(() => readFileSync(join(directory, 'Formula/excalidraw-cli.rb'))).toThrow();
   });
 });
+
+describe('Homebrew validation before tap publication', () => {
+  it.each(['', 'install', 'test'])('propagates Homebrew failures: %s', (failure) => {
+    expect(runStep('Generate Homebrew formula').status).toBe(0);
+    writeFileSync(
+      join(directory, 'brew'),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+case "$1" in
+  shellenv) exit 0 ;;
+  tap-new) mkdir -p "$RUNNER_TEMP/tap/Formula" ;;
+  --repository) printf '%s\\n' "$RUNNER_TEMP/tap" ;;
+  install|test) if [ "$1" = "$BREW_FAILURE" ]; then exit 1; fi ;;
+  *) exit 99 ;;
+esac
+`,
+      { mode: 0o755 }
+    );
+    const result = runStep('Validate Homebrew formula', { BREW_FAILURE: failure });
+    expect(result.status).toBe(failure ? 1 : 0);
+    expect(readFileSync(join(directory, 'tap/Formula/excalidraw-cli.rb'), 'utf8')).toBe(
+      readFileSync(join(directory, 'Formula/excalidraw-cli.rb'), 'utf8')
+    );
+    const calls = readFileSync(join(directory, 'calls'), 'utf8');
+    expect(calls).toContain('install --build-from-source local/release-check/excalidraw-cli');
+    if (failure !== 'install') expect(calls).toContain('test local/release-check/excalidraw-cli');
+    else expect(calls).not.toContain('test local/release-check/excalidraw-cli');
+    const names = steps.map((step) => step.name);
+    expect(names.indexOf('Generate Homebrew formula')).toBeLessThan(
+      names.indexOf('Validate Homebrew formula')
+    );
+    expect(names.indexOf('Validate Homebrew formula')).toBeLessThan(
+      names.indexOf('Push Homebrew formula to tap')
+    );
+  });
+});

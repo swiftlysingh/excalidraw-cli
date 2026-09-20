@@ -165,6 +165,15 @@ jobs:
           end
           EOF
 
+      - name: Validate Homebrew formula
+        run: |
+          export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
+          eval "$(brew shellenv)"
+          brew tap-new local/release-check
+          cp Formula/excalidraw-cli.rb "$(brew --repository local/release-check)/Formula/excalidraw-cli.rb"
+          brew install --build-from-source local/release-check/excalidraw-cli
+          brew test local/release-check/excalidraw-cli
+
       - name: Push Homebrew formula to tap
         env:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
