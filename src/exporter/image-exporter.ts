@@ -346,7 +346,7 @@ async function renderSvg(
   };
 
   const svg = await exportToSvg({
-    elements: file.elements as unknown[],
+    elements: file.elements.filter((element) => !element.isDeleted) as unknown[],
     appState: appState as Record<string, unknown>,
     files: (file.files || {}) as Record<string, unknown>,
     exportPadding: opts.padding,

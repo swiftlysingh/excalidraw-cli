@@ -141,18 +141,27 @@ describe('edge cases and error handling', () => {
   });
 
   describe('file with deleted elements', () => {
-    it('should handle elements marked as deleted', async () => {
+    it('should exclude deleted elements from the exported bounds', async () => {
       const file = createMinimalFile();
-      // Mark the element as deleted
-      (file.elements[0] as any).isDeleted = true;
+      const baselineSvg = await convertToSVG(file);
+      file.elements.push({
+        ...file.elements[0],
+        id: 'deleted-distant-rect',
+        x: 10000,
+        y: 10000,
+        isDeleted: true,
+      });
 
-      // Should still produce valid output (possibly empty-ish)
-      try {
-        const svg = await convertToSVG(file);
-        expect(svg).toContain('<svg');
-      } catch {
-        // Acceptable if @excalidraw/utils can't handle all-deleted elements
-      }
+      const svg = await convertToSVG(file);
+      const bounds = (markup: string) => ({
+        viewBox: markup.match(/viewBox="([^"]+)"/)?.[1],
+        width: markup.match(/width="([^"]+)"/)?.[1],
+        height: markup.match(/height="([^"]+)"/)?.[1],
+      });
+
+      const baselineBounds = bounds(baselineSvg);
+      expect(Object.values(baselineBounds)).not.toContain(undefined);
+      expect(bounds(svg)).toEqual(baselineBounds);
     }, 30000);
   });
 

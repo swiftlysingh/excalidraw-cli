@@ -88,8 +88,9 @@ jobs:
       - name: Compute release artifact SHA256
         id: asset
         run: |
-          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${{ steps.release_tag.outputs.tag }}.tar.gz"
-          curl -L "$TARBALL_URL" -o release.tar.gz
+          VERSION="${{ steps.version_check.outputs.package_version }}"
+          TARBALL_URL=$(npm view "@swiftlysingh/excalidraw-cli@$VERSION" dist.tarball)
+          curl --fail --location --show-error --retry 3 "$TARBALL_URL" -o release.tar.gz
           SHA256=$(sha256sum release.tar.gz | awk '{print $1}')
           echo "tarball_url=$TARBALL_URL" >> "$GITHUB_OUTPUT"
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
@@ -109,7 +110,12 @@ jobs:
 
             def install
               system "npm", "install", *std_npm_args
+              bin.install_symlink Dir["#{libexec}/bin/*"]
               man1.install "man/excalidraw-cli.1"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/excalidraw-cli --version")
             end
           end
           EOF

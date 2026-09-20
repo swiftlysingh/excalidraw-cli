@@ -332,8 +332,13 @@ function tokenize(input: string): Token[] {
   const len = input.length;
 
   while (i < len) {
+    if (i === 0 && input[i] === '\uFEFF') {
+      i++;
+      continue;
+    }
+
     // Skip whitespace (except newlines)
-    if (input[i] === ' ' || input[i] === '\t') {
+    if (input[i] === ' ' || input[i] === '\t' || input[i] === '\r') {
       i++;
       continue;
     }
@@ -353,11 +358,15 @@ function tokenize(input: string): Token[] {
 
     // Image ![path] or ![path](WxH)
     if (input[i] === '!' && input[i + 1] === '[') {
+      const startIndex = i;
       i += 2; // skip ![
       let src = '';
       while (i < len && input[i] !== ']') {
         src += input[i];
         i++;
+      }
+      if (i >= len) {
+        throw new Error(`Unterminated image path starting at index ${startIndex}`);
       }
       i++; // skip ]
 
@@ -371,6 +380,9 @@ function tokenize(input: string): Token[] {
         while (i < len && input[i] !== ')') {
           dims += input[i];
           i++;
+        }
+        if (i >= len) {
+          throw new Error(`Unterminated image dimensions starting at index ${startIndex}`);
         }
         i++; // skip )
         const match = dims.match(/^(\d+)\s*[xX]\s*(\d+)$/);
@@ -426,11 +438,15 @@ function tokenize(input: string): Token[] {
 
     // Database [[Label]]
     if (input[i] === '[' && input[i + 1] === '[') {
+      const startIndex = i;
       i += 2;
       let label = '';
       while (i < len && !(input[i] === ']' && input[i + 1] === ']')) {
         label += input[i];
         i++;
+      }
+      if (i >= len) {
+        throw new Error(`Unterminated database node starting at index ${startIndex}`);
       }
       i += 2; // skip ]]
       tokens.push(createNodeToken(label, 'database'));
@@ -439,6 +455,7 @@ function tokenize(input: string): Token[] {
 
     // Rectangle [Label]
     if (input[i] === '[') {
+      const startIndex = i;
       i++;
       let label = '';
       let depth = 1;
@@ -448,12 +465,16 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
+      if (depth > 0) {
+        throw new Error(`Unterminated rectangle node starting at index ${startIndex}`);
+      }
       tokens.push(createNodeToken(label, 'rectangle'));
       continue;
     }
 
     // Diamond {Label}
     if (input[i] === '{') {
+      const startIndex = i;
       i++;
       let label = '';
       let depth = 1;
@@ -463,12 +484,16 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
+      if (depth > 0) {
+        throw new Error(`Unterminated diamond node starting at index ${startIndex}`);
+      }
       tokens.push(createNodeToken(label, 'diamond'));
       continue;
     }
 
     // Ellipse (Label)
     if (input[i] === '(') {
+      const startIndex = i;
       i++;
       let label = '';
       let depth = 1;
@@ -477,6 +502,9 @@ function tokenize(input: string): Token[] {
         else if (input[i] === ')') depth--;
         if (depth > 0) label += input[i];
         i++;
+      }
+      if (depth > 0) {
+        throw new Error(`Unterminated ellipse node starting at index ${startIndex}`);
       }
       tokens.push(createNodeToken(label, 'ellipse'));
       continue;
@@ -537,8 +565,7 @@ function tokenize(input: string): Token[] {
       continue;
     }
 
-    // Skip unknown characters
-    i++;
+    throw new Error(`Unexpected character ${JSON.stringify(input[i])} at index ${i}`);
   }
 
   return tokens;
@@ -660,6 +687,7 @@ export function parseDSL(input: string): FlowchartGraph {
   let i = 0;
   let lastNode: GraphNode | null = null;
   let pendingLabel: string | null = null;
+  let pendingArrow: Token | null = null;
   let pendingDashed = false;
   let pendingReversed = false;
   let pendingBidirectional = false;
@@ -669,9 +697,7 @@ export function parseDSL(input: string): FlowchartGraph {
       ...(pendingDashed ? { strokeStyle: 'dashed' as const } : {}),
       ...(pendingBidirectional
         ? { startArrowhead: 'arrow' as const, endArrowhead: 'arrow' as const }
-        : pendingReversed
-          ? { startArrowhead: 'arrow' as const, endArrowhead: null }
-          : {}),
+        : {}),
     };
 
     edges.push({
@@ -683,6 +709,7 @@ export function parseDSL(input: string): FlowchartGraph {
     });
 
     pendingLabel = null;
+    pendingArrow = null;
     pendingDashed = false;
     pendingReversed = false;
     pendingBidirectional = false;
@@ -692,6 +719,9 @@ export function parseDSL(input: string): FlowchartGraph {
     const token = tokens[i];
 
     if (token.type === 'newline') {
+      if (pendingArrow) {
+        throw new Error(`Dangling arrow ${pendingArrow.value}: missing target node`);
+      }
       lastNode = null;
       pendingLabel = null;
       pendingDashed = false;
@@ -743,6 +773,8 @@ export function parseDSL(input: string): FlowchartGraph {
             });
           }
         }
+      } else {
+        throw new Error(`Unknown directive @${directive}`);
       }
       i++;
       continue;
@@ -758,6 +790,11 @@ export function parseDSL(input: string): FlowchartGraph {
       const node = getOrCreateNode(token.value, 'image', imageData);
 
       if (lastNode) {
+        if (!pendingArrow) {
+          throw new Error(
+            `Adjacent nodes ${JSON.stringify(lastNode.label)} and ${JSON.stringify(node.label)} require an arrow`
+          );
+        }
         createPendingEdge(lastNode, node);
       }
 
@@ -785,6 +822,11 @@ export function parseDSL(input: string): FlowchartGraph {
       const node = getOrCreateNode(token.value, token.nodeType!, undefined, token.nodeStyle);
 
       if (lastNode) {
+        if (!pendingArrow) {
+          throw new Error(
+            `Adjacent nodes ${JSON.stringify(lastNode.label)} and ${JSON.stringify(node.label)} require an arrow`
+          );
+        }
         createPendingEdge(lastNode, node);
       }
 
@@ -794,6 +836,15 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     if (token.type === 'arrow') {
+      if (!lastNode) {
+        throw new Error(`Unexpected arrow ${token.value}: missing source node`);
+      }
+      if (pendingArrow) {
+        throw new Error(
+          `Unexpected arrow ${token.value}: missing target node after ${pendingArrow.value}`
+        );
+      }
+
       const nextToken = tokens[i + 1];
       if (nextToken?.type === 'label') {
         const trailingArrow = tokens[i + 2];
@@ -813,6 +864,7 @@ export function parseDSL(input: string): FlowchartGraph {
 
         pendingDashed = false;
         pendingLabel = nextToken.value;
+        pendingArrow = token;
         i += 3;
         continue;
       }
@@ -820,6 +872,7 @@ export function parseDSL(input: string): FlowchartGraph {
       pendingDashed = token.dashed || false;
       pendingReversed = token.reversed || false;
       pendingBidirectional = token.bidirectional || false;
+      pendingArrow = token;
       i++;
       continue;
     }
@@ -830,6 +883,10 @@ export function parseDSL(input: string): FlowchartGraph {
     }
 
     i++;
+  }
+
+  if (pendingArrow) {
+    throw new Error(`Dangling arrow ${pendingArrow.value}: missing target node`);
   }
 
   const result: FlowchartGraph = {

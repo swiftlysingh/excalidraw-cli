@@ -66,6 +66,28 @@ describe('DSL Parser', () => {
       expect(result.nodes[0].style).toBeUndefined();
     });
 
+    it.each([
+      ['[Unterminated', 'Unterminated rectangle node'],
+      ['{Unterminated', 'Unterminated diamond node'],
+      ['(Unterminated', 'Unterminated ellipse node'],
+      ['[[Unterminated', 'Unterminated database node'],
+      ['![image.png', 'Unterminated image path'],
+      ['![image.png](200x100', 'Unterminated image dimensions'],
+    ])('should reject an unterminated %s', (input, message) => {
+      expect(() => parseDSL(input)).toThrow(message);
+    });
+
+    it('should preserve nested and multiline node labels', () => {
+      const result = parseDSL('[Outer [Inner]]\n{Choice {Nested}}\n(Start\nHere)\n[[Records]]');
+
+      expect(result.nodes.map((node) => node.label)).toEqual([
+        'Outer [Inner]',
+        'Choice {Nested}',
+        'Start\nHere',
+        'Records',
+      ]);
+    });
+
     it('should generate Excalidraw arrows for reverse and bidirectional connections', async () => {
       const graph = parseDSL(`[A] <- [B]
 [C] <-> [D]`);
@@ -74,7 +96,7 @@ describe('DSL Parser', () => {
       const arrows = file.elements.filter((element) => element.type === 'arrow');
 
       expect(arrows).toHaveLength(2);
-      expect(arrows[0]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: null });
+      expect(arrows[0]).toMatchObject({ startArrowhead: null, endArrowhead: 'arrow' });
       expect(arrows[1]).toMatchObject({ startArrowhead: 'arrow', endArrowhead: 'arrow' });
     });
   });
@@ -141,11 +163,7 @@ describe('DSL Parser', () => {
       const result = parseDSL('[A] <-- [B]');
       expect(result.edges[0].source).toBe(result.nodes[1].id);
       expect(result.edges[0].target).toBe(result.nodes[0].id);
-      expect(result.edges[0].style).toEqual({
-        strokeStyle: 'dashed',
-        startArrowhead: 'arrow',
-        endArrowhead: null,
-      });
+      expect(result.edges[0].style).toEqual({ strokeStyle: 'dashed' });
     });
 
     it('should parse dashed bidirectional connections', () => {
@@ -163,10 +181,7 @@ describe('DSL Parser', () => {
       const reverse = parseDSL('[A] <- [B]');
       expect(reverse.edges[0].source).toBe(reverse.nodes[1].id);
       expect(reverse.edges[0].target).toBe(reverse.nodes[0].id);
-      expect(reverse.edges[0].style).toEqual({
-        startArrowhead: 'arrow',
-        endArrowhead: null,
-      });
+      expect(reverse.edges[0].style).toBeUndefined();
 
       const bidirectional = parseDSL('[A] <-> [B]');
       expect(bidirectional.edges[0].source).toBe(bidirectional.nodes[0].id);
@@ -182,10 +197,7 @@ describe('DSL Parser', () => {
       expect(result.edges).toHaveLength(1);
       expect(result.edges[0].source).toBe(result.nodes[1].id);
       expect(result.edges[0].target).toBe(result.nodes[0].id);
-      expect(result.edges[0].style).toEqual({
-        startArrowhead: 'arrow',
-        endArrowhead: null,
-      });
+      expect(result.edges[0].style).toBeUndefined();
     });
 
     it('should parse bidirectional connections with arrowheads on both ends', () => {
@@ -203,6 +215,26 @@ describe('DSL Parser', () => {
       const result = parseDSL('[A] -> [B] -> [C]');
       expect(result.nodes).toHaveLength(3);
       expect(result.edges).toHaveLength(2);
+    });
+
+    it('should reject garbage tokens', () => {
+      expect(() => parseDSL('[A] garbage -> [B]')).toThrow('Unexpected character "g"');
+      expect(() => parseDSL('@unknown value')).toThrow('Unknown directive @unknown');
+    });
+
+    it('should accept a UTF-8 byte order mark', () => {
+      const result = parseDSL('\uFEFF[A] -> [B]');
+      expect(result.nodes).toHaveLength(2);
+      expect(result.edges).toHaveLength(1);
+    });
+
+    it('should reject dangling arrows', () => {
+      expect(() => parseDSL('[A] ->')).toThrow('Dangling arrow ->: missing target node');
+      expect(() => parseDSL('-> [A]')).toThrow('Unexpected arrow ->: missing source node');
+    });
+
+    it('should reject adjacent nodes without an arrow', () => {
+      expect(() => parseDSL('[A] [B]')).toThrow('Adjacent nodes "A" and "B" require an arrow');
     });
   });
 
@@ -437,8 +469,8 @@ describe('DSL Parser', () => {
 
       expect(arrow).toMatchObject({
         strokeStyle: 'dashed',
-        startArrowhead: 'arrow',
-        endArrowhead: null,
+        startArrowhead: null,
+        endArrowhead: 'arrow',
       });
     });
 
