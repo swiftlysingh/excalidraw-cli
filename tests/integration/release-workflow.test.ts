@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 
-// js-yaml is already installed by the project's ESLint dependency.
 const { load } = createRequire(import.meta.url)('js-yaml');
 const workflow = load(readFileSync(resolve('.github/workflows/release.yml'), 'utf8'));
 const steps: { name: string; run?: string }[] = workflow.jobs.release.steps;
