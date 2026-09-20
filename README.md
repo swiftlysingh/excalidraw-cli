@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Create Excalidraw flowcharts and diagrams from text-based DSL or JSON.
+  Create Excalidraw flowcharts and diagrams from text-based DSL, JSON, or Graphviz DOT.
 </p>
 
 
@@ -26,14 +26,28 @@
 
 ## Installation
 
-Version 1.3.0 requires `Node >=20.19.0`. Node 18 is no longer supported.
+Requires `Node >=20.19.0`. Node 18 is no longer supported.
+
+The latest published package is 1.2.0. This README also documents the upcoming
+1.3.0 release, so the styling, extended arrow syntax, and other 1.3.0 changes
+require a source checkout until 1.3.0 is published. `npm` and `npx` currently
+install 1.2.0.
 
 ### Using npm
 
 ```bash
 npm install -g @swiftlysingh/excalidraw-cli
+```
 
-# or install via Homebrew
+### Homebrew
+
+The Homebrew formula is pending its first publication to
+[`swiftlysingh/homebrew-tap`](https://github.com/swiftlysingh/homebrew-tap). Until
+then, install the CLI with npm or run it with `npx`.
+
+After the formula is published:
+
+```bash
 brew tap swiftlysingh/tap
 brew install excalidraw-cli
 ```
@@ -48,11 +62,10 @@ npm run build
 npm link  # Makes 'excalidraw-cli' available globally
 ```
 
-### Direct Usage (No Install)
+### Run without a global install
 
 ```bash
-# Run directly with node
-node dist/cli.js create --inline "[A] -> [B]" -o diagram.excalidraw
+npx --yes @swiftlysingh/excalidraw-cli create --inline "[A] -> [B]" -o diagram.excalidraw
 ```
 
 ## Quick Start
@@ -68,6 +81,12 @@ excalidraw-cli create flowchart.dsl -o diagram.excalidraw
 
 # From stdin
 echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
+```
+
+### Create from DOT
+
+```bash
+excalidraw-cli create --format dot --inline 'digraph { A [label="Start"]; B [label="Process"]; A -> B; }' -o flow.excalidraw
 ```
 
 ### Export to Image
@@ -91,15 +110,17 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `{Label}` | Diamond | Decisions, conditionals |
 | `(Label)` | Ellipse | Start/End points |
 | `[[Label]]` | Database | Data storage |
+| `![path]` | Image | Local image node, default size 100x100 |
+| `![path](WxH)` | Image | Image node with an explicit size |
 | `[Label @fillStyle:hachure @backgroundColor:#a5d8ff]` | Styled node | Add inline node style attributes |
-| `->` | Arrow | Forward connection |
-| `<-` | Reverse Arrow | Reverse connection, logically parsed as right-to-left |
-| `<->` | Bidirectional Arrow | Connection with arrowheads on both ends |
-| `-->` | Dashed Arrow | Dashed connection |
-| `-> "text" ->` | Labeled Arrow | Connection with a double-quoted label |
-| `-> 'text' ->` | Labeled Arrow | Connection with a single-quoted label |
-| `<--` | Dashed Reverse Arrow | Dashed reversed connection |
-| `<-->` | Dashed Bidirectional Arrow | Dashed connection with arrowheads on both ends |
+| `[A] -> [B]` | Arrow | Forward connection |
+| `[A] <- [B]` | Reverse arrow | Connection from B to A |
+| `[A] <-> [B]` | Bidirectional arrow | Arrowheads on both ends |
+| `[A] --> [B]` | Dashed arrow | Dashed connection |
+| `[A] <-- [B]` | Dashed reverse arrow | Dashed connection from B to A |
+| `[A] <--> [B]` | Dashed bidirectional arrow | Dashed connection with arrowheads on both ends |
+| `[A] -> "text" -> [B]` | Labeled arrow | Double-quoted edge label |
+| `[A] -> 'text' -> [B]` | Labeled arrow | Single-quoted edge label |
 
 ### Example DSL
 
@@ -172,6 +193,10 @@ Precedence rules:
 @spacing 60      # Node spacing in pixels
 ```
 
+Image nodes use 100x100 when no size is supplied. Images added with `@image`,
+`@decorate`, or `@sticker` use 50x50 by default. Images added with `@scatter`
+use 30x30 by default.
+
 ## CLI Reference
 
 ### Commands
@@ -205,11 +230,11 @@ excalidraw-cli convert <input> [options]
 - `--format <format>` - **(required)** Export format: `png` or `svg`
 - `-o, --output <file>` - Output file path (default: input file with swapped extension)
 - `--export-background / --no-export-background` - Include or exclude background
-- `--background-color <color>` - Background color (default: #ffffff)
+- `--background-color <color>` - Background color. Uses the input scene's background when omitted, then falls back to `#ffffff`.
 - `--dark` - Export with dark mode theme
 - `--embed-scene` - Embed scene data in exported image
 - `--padding <n>` - Padding around content in pixels (default: 10)
-- `--scale <n>` - Scale factor for PNG export (default: 1)
+- `--scale <n>` - Scale factor for PNG export (default: 1; clamped to 0.1-10)
 - `--verbose` - Verbose output
 
 #### `parse`
@@ -292,6 +317,9 @@ const png = await convertToPNG(file, {
 writeFileSync('diagram.png', png);
 ```
 
+When no background is supplied, exports use `file.appState.viewBackgroundColor`
+and fall back to `#ffffff`. PNG scale values are clamped to `0.1` through `10`.
+
 `@excalidraw/utils` remains a required runtime dependency for image export. The CLI uses its `exportToSvg()` implementation for SVG generation, and reuses the bundled Excalidraw font assets so server-side PNG rendering keeps text output close to the browser version.
 
 ## Examples
@@ -317,8 +345,16 @@ The generated `.excalidraw` files can be:
 
 With the `convert` command, you can also generate:
 
-- **SVG** — scalable vector graphics, ideal for embedding in docs or web pages
-- **PNG** — raster images at any scale (1×, 2×, 3×, etc.) for presentations or sharing
+- **SVG**: scalable vector graphics, ideal for embedding in docs or web pages
+- **PNG**: raster images at a requested scale from 0.1× through 10× for presentations or sharing
+
+## Maintainer release checklist
+
+1. Update the version in `package.json` and both root package version entries in `package-lock.json`. The CLI reads its version from `package.json`. Update the version in the `man/excalidraw-cli.1` header and date the matching `CHANGELOG.md` heading.
+2. Run `npm ci`, `npm run build`, `npm run test:run`, and `npm run lint`.
+3. Configure the `NPM_TOKEN` and `HOMEBREW_TAP_GITHUB_TOKEN` repository secrets. The Homebrew token needs contents write access to [`swiftlysingh/homebrew-tap`](https://github.com/swiftlysingh/homebrew-tap).
+4. Create and push the matching `v<version>` tag. The release workflow also accepts a manual dispatch for that tag.
+5. If a downstream release step fails after npm has published, retry the same tag. The workflow detects the existing npm version and continues without publishing it again.
 
 ## License
 

@@ -10,26 +10,29 @@ on:
         description: 'Tag to release (for example v1.3.0)'
         required: true
 
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     permissions:
       contents: write
     steps:
       - name: Resolve release tag
         id: release_tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
+          git check-ref-format "refs/tags/$RELEASE_TAG"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ steps.release_tag.outputs.tag }}
+          ref: refs/tags/${{ steps.release_tag.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,6 +40,30 @@ jobs:
           node-version: '20.19.0'
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches package version
+        id: version_check
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
+          ACTUAL_TAG="$RELEASE_TAG"
+
+          echo "package_version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+          if [ "$ACTUAL_TAG" != "$EXPECTED_TAG" ]; then
+            echo "Tag mismatch: expected $EXPECTED_TAG, got $ACTUAL_TAG" >&2
+            exit 1
+          fi
+
+      - name: Check release credentials
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ] || [ -z "$HOMEBREW_TAP_GITHUB_TOKEN" ]; then
+            echo "Configure NPM_TOKEN and HOMEBREW_TAP_GITHUB_TOKEN before releasing." >&2
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
@@ -50,22 +77,26 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-      - name: Verify tag matches package version
-        id: version_check
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          EXPECTED_TAG="v${PACKAGE_VERSION}"
-          ACTUAL_TAG="${{ steps.release_tag.outputs.tag }}"
-
-          echo "package_version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
-
-          if [ "$ACTUAL_TAG" != "$EXPECTED_TAG" ]; then
-            echo "Tag mismatch: expected $EXPECTED_TAG, got $ACTUAL_TAG" >&2
-            exit 1
-          fi
-
       - name: Publish to npm
-        run: npm publish --access public
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          # A registry failure must stop the release, not look like an unpublished version.
+          npm view "$PACKAGE_NAME" versions --json > "$RUNNER_TEMP/npm-versions.json"
+          PUBLISHED=$(node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const { version } = require('./package.json');
+          const versions = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/npm-versions.json`, 'utf8'));
+          if (!Array.isArray(versions) || !versions.every(value => typeof value === 'string')) {
+            throw new Error('Unexpected npm versions response');
+          }
+          console.log(versions.includes(version));
+          NODE
+          )
+          if [ "$PUBLISHED" = "true" ]; then
+            echo "$PACKAGE_NAME is already published at this version; continuing the release."
+          else
+            npm publish --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -96,14 +127,22 @@ jobs:
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
 
       - name: Generate Homebrew formula
+        env:
+          TARBALL_URL: ${{ steps.asset.outputs.tarball_url }}
+          TARBALL_SHA256: ${{ steps.asset.outputs.sha256 }}
         run: |
+          if [[ ! "$TARBALL_URL" =~ ^https://registry\.npmjs\.org/@swiftlysingh/excalidraw-cli/-/[A-Za-z0-9._-]+\.tgz$ ]] ||
+             [[ ! "$TARBALL_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
+            echo "Invalid npm tarball URL or SHA256." >&2
+            exit 1
+          fi
           mkdir -p Formula
           cat > Formula/excalidraw-cli.rb <<EOF
           class ExcalidrawCli < Formula
             desc "CLI for creating Excalidraw flowcharts programmatically"
-            homepage "https://github.com/${{ github.repository }}"
-            url "${{ steps.asset.outputs.tarball_url }}"
-            sha256 "${{ steps.asset.outputs.sha256 }}"
+            homepage "https://github.com/$GITHUB_REPOSITORY"
+            url "$TARBALL_URL"
+            sha256 "$TARBALL_SHA256"
             license "MIT"
 
             depends_on "node"
@@ -136,5 +175,5 @@ jobs:
             echo "No Homebrew formula changes to commit"
             exit 0
           fi
-          git commit -m "Update excalidraw-cli formula for ${{ steps.release_tag.outputs.tag }}"
+          git commit -m "Update excalidraw-cli formula for $RELEASE_TAG"
           git push origin main
