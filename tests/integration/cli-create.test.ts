@@ -79,6 +79,14 @@ describe('CLI create options', () => {
     expect(arrow).toMatchObject({ startArrowhead: null, endArrowhead: null });
   });
 
+  it('rejects incomplete DSL without generating output', () => {
+    const result = runCLI(['create', '--inline', '[A] -> [B', '--output', '-']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Unterminated');
+  });
+
   it.each([
     [['create', '--inline', '[A]', '--format', 'yaml'], '--format must be'],
     [['parse', 'package.json', '--format', 'yaml'], '--format must be'],

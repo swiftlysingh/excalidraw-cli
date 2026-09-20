@@ -66,6 +66,28 @@ describe('DSL Parser', () => {
       expect(result.nodes[0].style).toBeUndefined();
     });
 
+    it.each([
+      ['[Unterminated', 'Unterminated rectangle node'],
+      ['{Unterminated', 'Unterminated diamond node'],
+      ['(Unterminated', 'Unterminated ellipse node'],
+      ['[[Unterminated', 'Unterminated database node'],
+      ['![image.png', 'Unterminated image path'],
+      ['![image.png](200x100', 'Unterminated image dimensions'],
+    ])('should reject an unterminated %s', (input, message) => {
+      expect(() => parseDSL(input)).toThrow(message);
+    });
+
+    it('should preserve nested and multiline node labels', () => {
+      const result = parseDSL('[Outer [Inner]]\n{Choice {Nested}}\n(Start\nHere)\n[[Records]]');
+
+      expect(result.nodes.map((node) => node.label)).toEqual([
+        'Outer [Inner]',
+        'Choice {Nested}',
+        'Start\nHere',
+        'Records',
+      ]);
+    });
+
     it('should generate Excalidraw arrows for reverse and bidirectional connections', async () => {
       const graph = parseDSL(`[A] <- [B]
 [C] <-> [D]`);

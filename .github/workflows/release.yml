@@ -110,7 +110,12 @@ jobs:
 
             def install
               system "npm", "install", *std_npm_args
+              bin.install_symlink Dir["#{libexec}/bin/*"]
               man1.install "man/excalidraw-cli.1"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/excalidraw-cli --version")
             end
           end
           EOF

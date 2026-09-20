@@ -358,11 +358,15 @@ function tokenize(input: string): Token[] {
 
     // Image ![path] or ![path](WxH)
     if (input[i] === '!' && input[i + 1] === '[') {
+      const startIndex = i;
       i += 2; // skip ![
       let src = '';
       while (i < len && input[i] !== ']') {
         src += input[i];
         i++;
+      }
+      if (i >= len) {
+        throw new Error(`Unterminated image path starting at index ${startIndex}`);
       }
       i++; // skip ]
 
@@ -376,6 +380,9 @@ function tokenize(input: string): Token[] {
         while (i < len && input[i] !== ')') {
           dims += input[i];
           i++;
+        }
+        if (i >= len) {
+          throw new Error(`Unterminated image dimensions starting at index ${startIndex}`);
         }
         i++; // skip )
         const match = dims.match(/^(\d+)\s*[xX]\s*(\d+)$/);
@@ -431,11 +438,15 @@ function tokenize(input: string): Token[] {
 
     // Database [[Label]]
     if (input[i] === '[' && input[i + 1] === '[') {
+      const startIndex = i;
       i += 2;
       let label = '';
       while (i < len && !(input[i] === ']' && input[i + 1] === ']')) {
         label += input[i];
         i++;
+      }
+      if (i >= len) {
+        throw new Error(`Unterminated database node starting at index ${startIndex}`);
       }
       i += 2; // skip ]]
       tokens.push(createNodeToken(label, 'database'));
@@ -444,6 +455,7 @@ function tokenize(input: string): Token[] {
 
     // Rectangle [Label]
     if (input[i] === '[') {
+      const startIndex = i;
       i++;
       let label = '';
       let depth = 1;
@@ -453,12 +465,16 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
+      if (depth > 0) {
+        throw new Error(`Unterminated rectangle node starting at index ${startIndex}`);
+      }
       tokens.push(createNodeToken(label, 'rectangle'));
       continue;
     }
 
     // Diamond {Label}
     if (input[i] === '{') {
+      const startIndex = i;
       i++;
       let label = '';
       let depth = 1;
@@ -468,12 +484,16 @@ function tokenize(input: string): Token[] {
         if (depth > 0) label += input[i];
         i++;
       }
+      if (depth > 0) {
+        throw new Error(`Unterminated diamond node starting at index ${startIndex}`);
+      }
       tokens.push(createNodeToken(label, 'diamond'));
       continue;
     }
 
     // Ellipse (Label)
     if (input[i] === '(') {
+      const startIndex = i;
       i++;
       let label = '';
       let depth = 1;
@@ -482,6 +502,9 @@ function tokenize(input: string): Token[] {
         else if (input[i] === ')') depth--;
         if (depth > 0) label += input[i];
         i++;
+      }
+      if (depth > 0) {
+        throw new Error(`Unterminated ellipse node starting at index ${startIndex}`);
       }
       tokens.push(createNodeToken(label, 'ellipse'));
       continue;
