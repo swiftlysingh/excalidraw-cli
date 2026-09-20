@@ -41,16 +41,26 @@ npm install -g @swiftlysingh/excalidraw-cli
 
 ### Homebrew
 
-The Homebrew formula is pending its first publication to
-[`swiftlysingh/homebrew-tap`](https://github.com/swiftlysingh/homebrew-tap). Until
-then, install the CLI with npm or run it with `npx`.
-
-After the formula is published:
+Install from the tap:
 
 ```bash
-brew tap swiftlysingh/tap
-brew install excalidraw-cli
+brew install swiftlysingh/tap/excalidraw-cli
 ```
+
+Homebrew installs Node.js and the published CLI package. To update later:
+
+```bash
+brew update
+brew upgrade swiftlysingh/tap/excalidraw-cli
+```
+
+If you already installed this package globally with npm, both installers use the
+same command and man-page names. To switch to Homebrew, remove the npm package
+first with `npm uninstall -g @swiftlysingh/excalidraw-cli`, then install with
+Homebrew. If Homebrew already installed the formula but reported a link
+conflict, run `brew link excalidraw-cli` after removing the npm package.
+
+Verify the Homebrew installation with `brew test swiftlysingh/tap/excalidraw-cli`.
 
 ### From Source (Local Development)
 
@@ -88,6 +98,11 @@ echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 ```bash
 excalidraw-cli create --format dot --inline 'digraph { A [label="Start"]; B [label="Process"]; A -> B; }' -o flow.excalidraw
 ```
+
+DOT supports directed and undirected graphs, node and edge labels, common shape
+mappings, and color/dashed/dotted styles. `rankdir` controls direction;
+`nodesep` and `ranksep` control approximate spacing. Subgraphs are flattened.
+See `man excalidraw-cli` for the supported attributes and shape mappings.
 
 ### Export to Image
 
@@ -193,9 +208,24 @@ Precedence rules:
 @spacing 60      # Node spacing in pixels
 ```
 
-Image nodes use 100x100 when no size is supplied. Images added with `@image`,
-`@decorate`, or `@sticker` use 50x50 by default. Images added with `@scatter`
-use 30x30 by default.
+Use `#` for comments outside node definitions and quoted labels.
+
+| Directive | Purpose |
+|-----------|---------|
+| `@image path at X,Y` | Place a local image at absolute coordinates. |
+| `@image path near (NodeLabel) anchor` | Place an image relative to a node. |
+| `@decorate path anchor` | Attach an image to the preceding node; anchor defaults to `top-right`. |
+| `@library path` | Set the directory used to resolve sticker names. |
+| `@sticker name` | Add a sticker at `0,0`; also supports `at X,Y` and `near (NodeLabel) anchor`. |
+| `@scatter path count:N width:W height:H` | Scatter repeated images; width and height are optional. |
+
+Anchors include `top`, `bottom`, `left`, `right`, and corners such as
+`top-right`. The anchor for `near` placement is optional.
+
+Image nodes and `@decorate` use 100x100 when no size is supplied. `@image` and
+`@sticker` use 50x50; `@scatter` uses 30x30. Local files are embedded in the
+output. Relative paths resolve from the current working directory. HTTP/HTTPS
+image URLs are skipped with a warning; download the image first.
 
 ## CLI Reference
 
@@ -210,9 +240,9 @@ excalidraw-cli create [input] [options]
 ```
 
 **Options:**
-- `-o, --output <file>` - Output file path (default: flowchart.excalidraw)
+- `-o, --output <file>` - Output file path (default: flowchart.excalidraw); use `-` for stdout
 - `-f, --format <type>` - Input format: dsl, json, dot (default: dsl)
-- `--inline <dsl>` - Inline DSL string
+- `--inline <input>` - Inline DSL, JSON, or DOT; use `--format` for JSON or DOT
 - `--stdin` - Read from stdin
 - `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
 - `-s, --spacing <n>` - Node spacing in pixels
@@ -244,6 +274,10 @@ Parse and validate input without generating output.
 ```bash
 excalidraw-cli parse <input> [options]
 ```
+
+Use `-f, --format <type>` to select `dsl`, `json`, or `dot`. Both `create` and
+`parse` detect JSON from `.json` and DOT from `.dot` or `.gv` filenames when
+`--format` is omitted. Other files and inline/stdin input default to DSL.
 
 ## JSON API
 
@@ -352,9 +386,10 @@ With the `convert` command, you can also generate:
 
 1. Update the version in `package.json` and both root package version entries in `package-lock.json`. The CLI reads its version from `package.json`. Update the version in the `man/excalidraw-cli.1` header and date the matching `CHANGELOG.md` heading.
 2. Run `npm ci`, `npm run build`, `npm run test:run`, and `npm run lint`.
-3. Configure the `NPM_TOKEN` and `HOMEBREW_TAP_GITHUB_TOKEN` repository secrets. The Homebrew token needs contents write access to [`swiftlysingh/homebrew-tap`](https://github.com/swiftlysingh/homebrew-tap).
+3. Confirm that the `NPM_TOKEN` and `HOMEBREW_TAP_GITHUB_TOKEN` repository secrets are configured and unexpired. The Homebrew token needs contents write access to [`swiftlysingh/homebrew-tap`](https://github.com/swiftlysingh/homebrew-tap).
 4. Create and push the matching `v<version>` tag. The release workflow also accepts a manual dispatch for that tag.
-5. If a downstream release step fails after npm has published, retry the same tag. The workflow detects the existing npm version and continues without publishing it again.
+5. Confirm the GitHub release, npm version, and tap formula were updated. Run `brew update`, `brew upgrade swiftlysingh/tap/excalidraw-cli`, and `brew test swiftlysingh/tap/excalidraw-cli`.
+6. If a downstream release step fails after npm has published, retry the same tag. The workflow detects the existing npm version and continues without publishing it again.
 
 ## License
 

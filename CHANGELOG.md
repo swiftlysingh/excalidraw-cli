@@ -7,7 +7,7 @@
 - Add inline node styling with `@node` defaults and per-node overrides.
 - Add reverse, bidirectional, and dashed arrow syntax, plus escaped quoted edge labels.
 - Make the release workflow safe to retry after npm has published the version.
-- Prepare the release workflow to generate the Homebrew formula from the published npm artifact.
+- Generate the Homebrew formula from the published npm artifact and test diagram creation plus PNG/SVG export.
 
 ### Fixed
 
