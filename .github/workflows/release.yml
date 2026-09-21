@@ -6,12 +6,17 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Create a minor release or retry an existing tag'
+        type: choice
+        options: [new, retry]
+        default: new
       tag:
-        description: 'Tag to release (for example v1.3.0)'
-        required: true
+        description: 'Existing tag, required only for retry (for example v1.3.0)'
+        required: false
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -23,16 +28,36 @@ jobs:
       contents: write
     steps:
       - name: Resolve release tag
-        id: release_tag
+        id: target
+        env:
+          INPUT_MODE: ${{ inputs.mode || 'new' }}
         run: |
-          git check-ref-format "refs/tags/$RELEASE_TAG"
-          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          MODE="$INPUT_MODE"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then MODE=retry; fi
+          case "$MODE" in
+            new)
+              if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$GITHUB_RUN_ATTEMPT" != "1" ]; then
+                echo "Start a new release from main. To resume an existing release, dispatch retry with its tag." >&2
+                exit 1
+              fi
+              echo "ref=refs/heads/main" >> "$GITHUB_OUTPUT"
+              ;;
+            retry)
+              if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+                echo "Retry requires an existing stable tag such as v1.3.0." >&2
+                exit 1
+              fi
+              echo "ref=refs/tags/$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+              ;;
+            *) echo "Unknown release mode." >&2; exit 1 ;;
+          esac
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: refs/tags/${{ steps.release_tag.outputs.tag }}
+          ref: ${{ steps.target.outputs.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -40,6 +65,33 @@ jobs:
           node-version: '20.19.0'
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare release version
+        id: release_tag
+        env:
+          MODE: ${{ steps.target.outputs.mode }}
+        run: |
+          if [ "$MODE" = "new" ]; then
+            git tag --list > "$RUNNER_TEMP/release-tags"
+            VERSION=$(node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const versions = fs.readFileSync(`${process.env.RUNNER_TEMP}/release-tags`, 'utf8')
+            .split('\n')
+            .filter(tag => /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(tag))
+            .map(tag => tag.slice(1).split('.').map(Number))
+            .sort((a, b) => b[0] - a[0] || b[1] - a[1] || b[2] - a[2]);
+          if (!versions.length) throw new Error('No stable release tag found.');
+          const [major, minor] = versions[0];
+          console.log(`${major}.${minor + 1}.0`);
+          NODE
+            )
+            npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts
+            RELEASE_TAG="v$VERSION"
+          fi
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Release: $RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "If publication fails after tagging, dispatch retry with $RELEASE_TAG." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify tag matches package version
         id: version_check
@@ -76,6 +128,17 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+
+      - name: Create release tag
+        if: steps.target.outputs.mode == 'new'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --detach
+          git add package.json package-lock.json
+          git commit --allow-empty -m "Release $RELEASE_TAG"
+          git tag "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
 
       - name: Publish to npm
         run: |

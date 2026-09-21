@@ -25,8 +25,8 @@
 
 Requires `Node >=20.19.0`. Node 18 is no longer supported.
 
-Styling and extended arrow syntax are available in the unreleased 1.3.0 source.
-The npm and Homebrew releases currently provide 1.2.0.
+Styling and extended arrow syntax require version 1.3.0 or later.
+See the [releases](https://github.com/swiftlysingh/excalidraw-cli/releases) for published versions.
 
 ### Using npm
 
@@ -297,6 +297,16 @@ Here are some flowcharts created with excalidraw-cli:
 
 Generated `.excalidraw` files open in [Excalidraw](https://excalidraw.com) and
 can be imported into Obsidian's Excalidraw plugin.
+
+## Releasing
+
+Run the **Release** workflow from `main` to create the next minor version from the
+latest stable tag. It tests the updated package, creates a release commit and tag,
+then publishes npm, GitHub, and Homebrew. The version commit stays on the tag;
+protected `main` is unchanged.
+
+To resume a partially published release, choose **retry** and enter its existing
+tag. A retry does not bump the version.
 
 ## License
 
