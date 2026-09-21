@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 
 const { load } = createRequire(import.meta.url)('js-yaml');
 const workflow = load(readFileSync(resolve('.github/workflows/release.yml'), 'utf8'));
-const steps: { name: string; run?: string }[] = workflow.jobs.release.steps;
+const steps: { name: string; run?: string; if?: string }[] = workflow.jobs.release.steps;
 const version = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version;
 let directory: string;
 
@@ -283,12 +283,23 @@ describe('automatic minor releases', () => {
     ).toBe(0);
     expect(readFileSync(join(directory, 'package.json'), 'utf8')).toBe(before);
     expect(git('tag', '--list')).toBe(tags);
+    expect(steps.find((step) => step.name === 'Create release tag')?.if).toBe(
+      "steps.target.outputs.mode == 'new'"
+    );
     expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.2.0');
   });
 
   it('never replaces an existing remote tag', () => {
-    expect(runStep('Create release tag', { RELEASE_TAG: 'v1.2.0' }).status).not.toBe(0);
-    expect(git('--git-dir=remote.git', 'rev-parse', 'v1.2.0')).toBe(git('rev-parse', 'main'));
+    expect(runStep('Prepare release version', { MODE: 'new' }).status).toBe(0);
+    const original = git('rev-parse', 'main');
+    git('--git-dir=remote.git', 'update-ref', 'refs/tags/v1.3.0', original);
+    expect(git('tag', '--list', 'v1.3.0')).toBe('');
+
+    const result = runStep('Create release tag', { RELEASE_TAG: 'v1.3.0' });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('[rejected]');
+    expect(git('rev-parse', 'v1.3.0')).not.toBe(original);
+    expect(git('--git-dir=remote.git', 'rev-parse', 'v1.3.0')).toBe(original);
   });
 });
 
