@@ -235,6 +235,8 @@ jobs:
 
       - name: Validate Homebrew formula
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
           eval "$(brew shellenv)"
           brew tap-new local/release-check
@@ -246,9 +248,6 @@ jobs:
         env:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git clone "https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/swiftlysingh/homebrew-tap.git" homebrew-tap
           cp Formula/excalidraw-cli.rb homebrew-tap/Formula/excalidraw-cli.rb
 
