@@ -118,9 +118,14 @@ jobs:
 
       - name: Compute release artifact SHA256
         id: asset
+        env:
+          VERSION: ${{ steps.version_check.outputs.package_version }}
         run: |
-          VERSION="${{ steps.version_check.outputs.package_version }}"
           TARBALL_URL=$(npm view "@swiftlysingh/excalidraw-cli@$VERSION" dist.tarball)
+          if [[ ! "$TARBALL_URL" =~ ^https://registry\.npmjs\.org/@swiftlysingh/excalidraw-cli/-/[A-Za-z0-9._-]+\.tgz$ ]]; then
+            echo "Invalid npm tarball URL." >&2
+            exit 1
+          fi
           curl --fail --location --show-error --retry 3 "$TARBALL_URL" -o release.tar.gz
           SHA256=$(sha256sum release.tar.gz | awk '{print $1}')
           echo "tarball_url=$TARBALL_URL" >> "$GITHUB_OUTPUT"

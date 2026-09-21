@@ -23,6 +23,7 @@ function runStep(name: string, env: Record<string, string> = {}) {
       RUNNER_TEMP: directory,
       GITHUB_OUTPUT: join(directory, 'output'),
       RELEASE_TAG: `v${version}`,
+      VERSION: version,
       GITHUB_REPOSITORY: 'swiftlysingh/excalidraw-cli',
       TARBALL_URL: `https://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/excalidraw-cli-${version}.tgz`,
       TARBALL_SHA256: 'a'.repeat(64),
@@ -172,5 +173,37 @@ esac
     expect(names.indexOf('Validate Homebrew formula')).toBeLessThan(
       names.indexOf('Push Homebrew formula to tap')
     );
+  });
+});
+
+describe('release artifact download', () => {
+  it.each([
+    '',
+    'http://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/package.tgz',
+    'https://example.com/package.tgz',
+    'file:///etc/hosts',
+    'https://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/$(touch injected).tgz',
+    'https://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/package.tgz\nhttps://example.com',
+    `https://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/excalidraw-cli-${version}.tgz`,
+  ])('validates the URL before invoking curl: %s', (url) => {
+    writeFileSync(
+      join(directory, 'curl'),
+      `#!/bin/bash
+printf '%s' "$*" > "$RUNNER_TEMP/curl-call"
+exit 42
+`,
+      { mode: 0o755 }
+    );
+    const result = runStep('Compute release artifact SHA256', { NPM_VERSIONS: url });
+    if (url.endsWith(`excalidraw-cli-${version}.tgz`)) {
+      expect(result.status).toBe(42);
+      expect(readFileSync(join(directory, 'curl-call'), 'utf8')).toContain(url);
+    } else {
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Invalid npm tarball URL.');
+      expect(() => readFileSync(join(directory, 'curl-call'))).toThrow();
+    }
+    expect(() => readFileSync(join(directory, 'injected'))).toThrow();
+    expect(() => readFileSync(join(directory, 'output'))).toThrow();
   });
 });
