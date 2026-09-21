@@ -181,15 +181,26 @@ jobs:
 
       - name: Compute release artifact SHA256
         id: asset
+        timeout-minutes: 8
         env:
           VERSION: ${{ steps.version_check.outputs.package_version }}
         run: |
-          TARBALL_URL=$(npm view "@swiftlysingh/excalidraw-cli@$VERSION" dist.tarball)
+          for ATTEMPT in {1..12}; do
+            if TARBALL_URL=$(npm view "@swiftlysingh/excalidraw-cli@$VERSION" dist.tarball --prefer-online --fetch-retries=0 --fetch-timeout=10000); then
+              break
+            fi
+            if [ "$ATTEMPT" = "12" ]; then
+              echo "npm artifact for $VERSION is still unavailable after 12 attempts. Retry this release with v$VERSION once npm finishes processing." >&2
+              exit 1
+            fi
+            echo "Waiting for npm to expose $VERSION (attempt $ATTEMPT/12)..."
+            sleep 15
+          done
           if [[ ! "$TARBALL_URL" =~ ^https://registry\.npmjs\.org/@swiftlysingh/excalidraw-cli/-/[A-Za-z0-9._-]+\.tgz$ ]]; then
             echo "Invalid npm tarball URL." >&2
             exit 1
           fi
-          curl --fail --location --show-error --retry 3 "$TARBALL_URL" -o release.tar.gz
+          curl --fail --location --show-error --retry 3 --retry-all-errors --retry-delay 10 --retry-max-time 60 --max-time 30 "$TARBALL_URL" -o release.tar.gz
           SHA256=$(sha256sum release.tar.gz | awk '{print $1}')
           echo "tarball_url=$TARBALL_URL" >> "$GITHUB_OUTPUT"
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"

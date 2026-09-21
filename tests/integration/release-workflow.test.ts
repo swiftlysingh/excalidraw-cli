@@ -343,3 +343,70 @@ describe('manual release selection', () => {
     );
   });
 });
+
+describe('npm artifact availability', () => {
+  it.each([0, 2, 12])('waits through %i unavailable registry responses', (unavailable) => {
+    writeFileSync(join(directory, 'attempts'), '0');
+    writeFileSync(
+      join(directory, 'npm'),
+      `#!/bin/bash
+attempt=$(cat "$RUNNER_TEMP/attempts")
+attempt=$((attempt + 1))
+printf '%s' "$attempt" > "$RUNNER_TEMP/attempts"
+if [ "$attempt" -le "$UNAVAILABLE" ]; then
+  echo "npm error E404: package is processing" >&2
+  exit 1
+fi
+printf '%s' "$REGISTRY_TARBALL_URL"
+`,
+      { mode: 0o755 }
+    );
+    writeFileSync(
+      join(directory, 'sleep'),
+      `#!/bin/bash
+echo "$1" >> "$RUNNER_TEMP/sleeps"
+`,
+      { mode: 0o755 }
+    );
+    writeFileSync(
+      join(directory, 'curl'),
+      `#!/bin/bash
+echo "$*" > "$RUNNER_TEMP/curl-call"
+printf 'artifact' > release.tar.gz
+`,
+      { mode: 0o755 }
+    );
+    writeFileSync(
+      join(directory, 'sha256sum'),
+      `#!/bin/bash
+printf '%s  release.tar.gz' "$TARBALL_SHA256"
+`,
+      { mode: 0o755 }
+    );
+
+    const result = runStep('Compute release artifact SHA256', {
+      UNAVAILABLE: String(unavailable),
+      REGISTRY_TARBALL_URL: `https://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/excalidraw-cli-${version}.tgz`,
+    });
+    expect(Number(readFileSync(join(directory, 'attempts'), 'utf8'))).toBe(
+      Math.min(unavailable + 1, 12)
+    );
+    if (unavailable === 12) {
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('still unavailable after 12 attempts');
+      expect(() => readFileSync(join(directory, 'curl-call'))).toThrow();
+      expect(() => readFileSync(join(directory, 'output'))).toThrow();
+    } else {
+      expect(result.status, result.stderr).toBe(0);
+      expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('sha256=' + 'a'.repeat(64));
+      expect(readFileSync(join(directory, 'curl-call'), 'utf8')).toContain('--retry-all-errors');
+    }
+    if (unavailable > 0) {
+      expect(readFileSync(join(directory, 'sleeps'), 'utf8').trim().split('\n')).toEqual(
+        Array(Math.min(unavailable, 11)).fill('15')
+      );
+    } else {
+      expect(() => readFileSync(join(directory, 'sleeps'))).toThrow();
+    }
+  });
+});
