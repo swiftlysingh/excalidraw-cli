@@ -21,6 +21,7 @@ function runStep(name: string, env: Record<string, string> = {}) {
       ...process.env,
       PATH: `${directory}:${process.env.PATH}`,
       RUNNER_TEMP: directory,
+      GIT_CONFIG_GLOBAL: join(directory, 'gitconfig'),
       GITHUB_OUTPUT: join(directory, 'output'),
       GITHUB_ENV: join(directory, 'env'),
       GITHUB_STEP_SUMMARY: join(directory, 'summary'),
@@ -156,7 +157,11 @@ describe('Homebrew validation before tap publication', () => {
 printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
 case "$1" in
   shellenv) exit 0 ;;
-  tap-new) mkdir -p "$RUNNER_TEMP/tap/Formula" ;;
+  tap-new)
+    mkdir -p "$RUNNER_TEMP/tap/Formula"
+    git -C "$RUNNER_TEMP/tap" init --quiet
+    git -C "$RUNNER_TEMP/tap" -c commit.gpgsign=false commit --quiet --allow-empty -m "Create tap"
+    ;;
   --repository) printf '%s\\n' "$RUNNER_TEMP/tap" ;;
   install|test) if [ "$1" = "$BREW_FAILURE" ]; then exit 1; fi ;;
   *) exit 99 ;;
