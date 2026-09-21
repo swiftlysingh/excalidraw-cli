@@ -205,11 +205,11 @@ program
   .option('-o, --output <file>', 'Output file path (default: input file with swapped extension)')
   .option('--export-background', 'Include background in export (default: true)')
   .option('--no-export-background', 'Exclude background from export')
-  .option('--background-color <color>', 'Background color (default: #ffffff)')
+  .option('--background-color <color>', 'Background color (default: scene background, then #ffffff)')
   .option('--dark', 'Export with dark mode')
   .option('--embed-scene', 'Embed scene data in exported image')
   .option('--padding <n>', 'Padding around content in pixels', '10')
-  .option('--scale <n>', 'Scale factor for PNG export', '1')
+  .option('--scale <n>', 'Scale factor for PNG export (clamped to 0.1-10)', '1')
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options) => {
     try {

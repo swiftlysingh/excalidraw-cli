@@ -1,4 +1,4 @@
-.TH EXCALIDRAW-CLI 1 "August 2026" "excalidraw-cli 1.3.0" "User Commands"
+.TH EXCALIDRAW-CLI 1 "September 19, 2026" "excalidraw-cli 1.3.0" "User Commands"
 .SH NAME
 excalidraw-cli \- create Excalidraw diagrams from DSL, JSON, or Graphviz DOT
 .SH SYNOPSIS
@@ -122,7 +122,9 @@ The default replaces the input file extension with the output format.
 Include or exclude the scene background.
 .TP
 .BR \-\-background-color " " <color>
-Set the export background color. The default is
+Set the export background color. If omitted, use the input scene's
+.B viewBackgroundColor
+value, then fall back to
 .BR #ffffff .
 .TP
 .BR \-\-dark
@@ -138,6 +140,14 @@ Set padding around the content in pixels. The default is
 .BR \-\-scale " " <n>
 Set the PNG output scale. The default is
 .BR 1 .
+Values below
+.B 0.1
+are clamped to
+.B 0.1
+and values above
+.B 10
+are clamped to
+.B 10 .
 .TP
 .BR \-\-verbose
 Print export progress information.
@@ -227,27 +237,48 @@ Start a node-style block followed by indented
 lines.
 .TP
 .B ![path]
-Image node using the default image size.
+Image node, default size
+.BR 100x100 .
 .TP
 .B ![path](WxH)
 Image node with explicit width and height.
 .SS "Edge syntax"
 .TP
-.B A -> B
+.B [A] -> [B]
 Solid edge.
 .TP
-.B A --> B
+.B [A] <- [B]
+Reverse edge from
+.I B
+to
+.IR A .
+.TP
+.B [A] <-> [B]
+Bidirectional edge with arrowheads on both ends.
+.TP
+.B [A] --> [B]
 Dashed edge.
 .TP
-.B A -> \(dqlabel\(dq -> B
-Labeled edge.
+.B [A] <-- [B]
+Dashed reverse edge from
+.I B
+to
+.IR A .
+.TP
+.B [A] <--> [B]
+Dashed bidirectional edge with arrowheads on both ends.
+.TP
+.B [A] -> \(dqlabel\(dq -> [B]
+Labeled solid edge with a double-quoted label.
+.TP
+.B [A] -> 'label' -> [B]
+Labeled solid edge with a single-quoted label.
 .P
 Nodes are deduplicated by label and type.
 Chains such as
 .B [A] -> [B] -> [C]
 produce one edge per hop.
 .SS "Node styling"
-.P
 Shape nodes can define style properties inline:
 .P
 .B [Login @fillStyle:hachure @backgroundColor:#a5d8ff]
@@ -343,10 +374,13 @@ Recognized JSON node types are
 .BR rectangle ,
 .BR diamond ,
 .BR ellipse ,
+.BR database ,
 and
-.BR database .
+.BR image .
 Any other node type is treated as
 .BR rectangle .
+JSON input does not currently include an image source field. Use DSL image
+nodes or image directives when a file-backed image is needed.
 .SH DOT FORMAT
 DOT input is parsed with
 .BR ts-graphviz .
@@ -407,15 +441,26 @@ attributes are preserved when possible.
 .B Subgraphs
 Subgraph nodes and edges are flattened into the main graph.
 .SH IMAGES AND STICKERS
-Image nodes, positioned images, decorations, scattered images, and stickers
-are embedded from local files.
+Image nodes using
+.B ![path]
+and decorations added with
+.B @decorate
+use a default size of
+.BR 100x100 .
+Images added with
+.B @image
+or
+.B @sticker
+use
+.BR 50x50
+by default. Images added with
+.B @scatter
+use
+.BR 30x30
+by default.
+All of these images are embedded from local files.
 HTTP and HTTPS URLs are accepted syntactically but are skipped during output
 generation with a warning.
-.P
-If image dimensions are not provided, the default size is
-.BR 100x100 .
-For scattered images, the default size is
-.BR 30x30 .
 .P
 Sticker names are resolved relative to the active
 .B @library
@@ -476,6 +521,9 @@ excalidraw-cli create flowchart.dsl -o -
 .B Parse a DOT file
 excalidraw-cli parse graph.dot --format dot
 .TP
+.B Create from inline DOT
+excalidraw-cli create --format dot --inline 'digraph { A [label="Start"]; B [label="Process"]; A -> B; }' -o flow.excalidraw
+.TP
 .B Export an Excalidraw document to PNG
 excalidraw-cli convert diagram.excalidraw --format png --scale 2
 .TP
@@ -491,4 +539,5 @@ Failure.
 .SH SEE ALSO
 Excalidraw:
 .UR https://excalidraw.com
+excalidraw.com
 .UE

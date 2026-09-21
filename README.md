@@ -9,10 +9,8 @@
 </p>
 
 <p align="center">
-  Create Excalidraw flowcharts and diagrams from text-based DSL or JSON.
+  Create Excalidraw flowcharts and diagrams from text-based DSL, JSON, or Graphviz DOT.
 </p>
-
-
 
 ## Features
 
@@ -23,20 +21,29 @@
 - **Export to PNG & SVG** with dark mode, custom backgrounds, scale, and padding
 - **Programmable API** for integration into other tools
 
-
 ## Installation
 
-Version 1.3.0 requires `Node >=20.19.0`. Node 18 is no longer supported.
+Requires `Node >=20.19.0`. Node 18 is no longer supported.
+
+Styling and extended arrow syntax are available in the unreleased 1.3.0 source.
+The npm and Homebrew releases currently provide 1.2.0.
 
 ### Using npm
 
 ```bash
 npm install -g @swiftlysingh/excalidraw-cli
-
-# or install via Homebrew
-brew tap swiftlysingh/tap
-brew install excalidraw-cli
 ```
+
+### Homebrew
+
+Install from the tap:
+
+```bash
+brew install swiftlysingh/tap/excalidraw-cli
+```
+
+Homebrew installs Node.js automatically. See the [tap README](https://github.com/swiftlysingh/homebrew-tap#readme)
+for upgrades and switching from an existing npm installation.
 
 ### From Source (Local Development)
 
@@ -48,11 +55,10 @@ npm run build
 npm link  # Makes 'excalidraw-cli' available globally
 ```
 
-### Direct Usage (No Install)
+### Run without a global install
 
 ```bash
-# Run directly with node
-node dist/cli.js create --inline "[A] -> [B]" -o diagram.excalidraw
+npx --yes @swiftlysingh/excalidraw-cli create --inline "[A] -> [B]" -o diagram.excalidraw
 ```
 
 ## Quick Start
@@ -69,6 +75,15 @@ excalidraw-cli create flowchart.dsl -o diagram.excalidraw
 # From stdin
 echo "[A] -> [B] -> [C]" | excalidraw-cli create --stdin -o diagram.excalidraw
 ```
+
+### Create from DOT
+
+```bash
+excalidraw-cli create --format dot --inline 'digraph { A [label="Start"]; B [label="Process"]; A -> B; }' -o flow.excalidraw
+```
+
+DOT subgraphs are flattened. See `man excalidraw-cli` for supported attributes
+and shape mappings.
 
 ### Export to Image
 
@@ -91,15 +106,17 @@ excalidraw-cli convert diagram.excalidraw --format svg --no-export-background
 | `{Label}` | Diamond | Decisions, conditionals |
 | `(Label)` | Ellipse | Start/End points |
 | `[[Label]]` | Database | Data storage |
+| `![path]` | Image | Local image node, default size 100x100 |
+| `![path](WxH)` | Image | Image node with an explicit size |
 | `[Label @fillStyle:hachure @backgroundColor:#a5d8ff]` | Styled node | Add inline node style attributes |
-| `->` | Arrow | Forward connection |
-| `<-` | Reverse Arrow | Reverse connection, logically parsed as right-to-left |
-| `<->` | Bidirectional Arrow | Connection with arrowheads on both ends |
-| `-->` | Dashed Arrow | Dashed connection |
-| `-> "text" ->` | Labeled Arrow | Connection with a double-quoted label |
-| `-> 'text' ->` | Labeled Arrow | Connection with a single-quoted label |
-| `<--` | Dashed Reverse Arrow | Dashed reversed connection |
-| `<-->` | Dashed Bidirectional Arrow | Dashed connection with arrowheads on both ends |
+| `[A] -> [B]` | Arrow | Forward connection |
+| `[A] <- [B]` | Reverse arrow | Connection from B to A |
+| `[A] <-> [B]` | Bidirectional arrow | Arrowheads on both ends |
+| `[A] --> [B]` | Dashed arrow | Dashed connection |
+| `[A] <-- [B]` | Dashed reverse arrow | Dashed connection from B to A |
+| `[A] <--> [B]` | Dashed bidirectional arrow | Dashed connection with arrowheads on both ends |
+| `[A] -> "text" -> [B]` | Labeled arrow | Double-quoted edge label |
+| `[A] -> 'text' -> [B]` | Labeled arrow | Single-quoted edge label |
 
 ### Example DSL
 
@@ -172,53 +189,26 @@ Precedence rules:
 @spacing 60      # Node spacing in pixels
 ```
 
+Use `#` for comments outside node definitions and quoted labels.
+
+Images must be local files; relative paths resolve from the working directory.
+Use `![path]` for an image node. For positioning, decorations, stickers, and
+scatter directives, see the [man page](man/excalidraw-cli.1).
+
 ## CLI Reference
 
-### Commands
+| Command | Purpose |
+|---------|---------|
+| `create [input]` | Generate an editable `.excalidraw` file. Accepts a file, `--inline`, or `--stdin`. |
+| `convert <input> --format png\|svg` | Export an existing `.excalidraw` file. |
+| `parse <input>` | Validate input and print its graph without generating a file. |
 
-#### `create`
+Use `--help` with any command for its options, or `man excalidraw-cli` for the
+full reference. `create -o -` writes to stdout.
 
-Create an Excalidraw flowchart.
-
-```bash
-excalidraw-cli create [input] [options]
-```
-
-**Options:**
-- `-o, --output <file>` - Output file path (default: flowchart.excalidraw)
-- `-f, --format <type>` - Input format: dsl, json, dot (default: dsl)
-- `--inline <dsl>` - Inline DSL string
-- `--stdin` - Read from stdin
-- `-d, --direction <dir>` - Flow direction: TB, BT, LR, RL
-- `-s, --spacing <n>` - Node spacing in pixels
-- `--verbose` - Verbose output
-
-#### `convert`
-
-Convert an existing `.excalidraw` file to PNG or SVG.
-
-```bash
-excalidraw-cli convert <input> [options]
-```
-
-**Options:**
-- `--format <format>` - **(required)** Export format: `png` or `svg`
-- `-o, --output <file>` - Output file path (default: input file with swapped extension)
-- `--export-background / --no-export-background` - Include or exclude background
-- `--background-color <color>` - Background color (default: #ffffff)
-- `--dark` - Export with dark mode theme
-- `--embed-scene` - Embed scene data in exported image
-- `--padding <n>` - Padding around content in pixels (default: 10)
-- `--scale <n>` - Scale factor for PNG export (default: 1)
-- `--verbose` - Verbose output
-
-#### `parse`
-
-Parse and validate input without generating output.
-
-```bash
-excalidraw-cli parse <input> [options]
-```
+Both `create` and `parse` detect `.json`, `.dot`, and `.gv` files. Other files
+and inline/stdin input default to DSL; use `--format json` or `--format dot`
+to override.
 
 ## JSON API
 
@@ -252,8 +242,6 @@ excalidraw-cli create flowchart.json -o diagram.excalidraw
 import {
   createFlowchartFromDSL,
   createFlowchartFromJSON,
-  convertToSVG,
-  convertToPNG,
 } from '@swiftlysingh/excalidraw-cli';
 
 // From DSL
@@ -261,14 +249,13 @@ const dsl = '(Start) -> [Process] -> (End)';
 const json = await createFlowchartFromDSL(dsl);
 
 // From JSON input
-const input = {
+const json2 = await createFlowchartFromJSON({
   nodes: [
     { id: 'a', type: 'rectangle', label: 'Hello' },
     { id: 'b', type: 'rectangle', label: 'World' }
   ],
   edges: [{ from: 'a', to: 'b' }]
-};
-const json2 = await createFlowchartFromJSON(input);
+});
 ```
 
 ### Export API
@@ -292,7 +279,8 @@ const png = await convertToPNG(file, {
 writeFileSync('diagram.png', png);
 ```
 
-`@excalidraw/utils` remains a required runtime dependency for image export. The CLI uses its `exportToSvg()` implementation for SVG generation, and reuses the bundled Excalidraw font assets so server-side PNG rendering keeps text output close to the browser version.
+When no background is supplied, exports use `file.appState.viewBackgroundColor`
+and fall back to `#ffffff`. PNG scale values are clamped to `0.1` through `10`.
 
 ## Examples
 
@@ -307,18 +295,8 @@ Here are some flowcharts created with excalidraw-cli:
 ### LeetCode Problem Solving Flow
 ![LeetCode Flow](assets/leetcode.png)
 
-## Output
-
-The generated `.excalidraw` files can be:
-
-1. Opened directly in [Excalidraw](https://excalidraw.com) (File > Open)
-2. Imported into Obsidian with the Excalidraw plugin
-3. Used with any tool that supports the Excalidraw format
-
-With the `convert` command, you can also generate:
-
-- **SVG** — scalable vector graphics, ideal for embedding in docs or web pages
-- **PNG** — raster images at any scale (1×, 2×, 3×, etc.) for presentations or sharing
+Generated `.excalidraw` files open in [Excalidraw](https://excalidraw.com) and
+can be imported into Obsidian's Excalidraw plugin.
 
 ## License
 
