@@ -12,6 +12,7 @@ import {
   createMinimalFile,
   createMultiElementFile,
   createFileWithBackground,
+  createLabeledAngledArrowFile,
   loadExcalidrawFixture,
 } from '../../helpers/fixtures.js';
 
@@ -31,7 +32,9 @@ function paethPredictor(a: number, b: number, c: number): number {
 
 function decodePngRgba(png: Buffer): { width: number; height: number; pixels: Buffer } {
   const signature = png.subarray(0, 8);
-  expect(signature.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true);
+  expect(signature.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(
+    true
+  );
 
   let offset = 8;
   let width = 0;
@@ -273,6 +276,36 @@ describe('convertToPNG', () => {
       expect(sawRedPixel).toBe(true);
     }, 30000);
   });
+
+  describe('labeled angled arrows', () => {
+    it('keeps the arrow line visible when bound label height is negative', async () => {
+      const file = createLabeledAngledArrowFile();
+      const png = await convertToPNG(file, { exportBackground: true, padding: 10 });
+      const decoded = decodePngRgba(png);
+
+      // Scene midpoint (400, 300) maps to SVG/PNG (310, 210) with padding 10.
+      const midX = 310;
+      const midY = 210;
+      let sawLinePixel = false;
+
+      for (let y = midY - 16; y <= midY + 16 && !sawLinePixel; y++) {
+        for (let x = midX - 16; x <= midX + 16; x++) {
+          if (x < 0 || y < 0 || x >= decoded.width || y >= decoded.height) {
+            continue;
+          }
+          const [r, g, b, a] = getPixel(decoded, x, y);
+          if (a > 200 && r < 140 && g > 100 && g < 210 && b > 180) {
+            sawLinePixel = true;
+            break;
+          }
+        }
+      }
+
+      expect(decoded.width).toBe(620);
+      expect(decoded.height).toBe(420);
+      expect(sawLinePixel).toBe(true);
+    }, 30000);
+  });
 });
 
 describe('convertImage with format=png', () => {
@@ -285,21 +318,21 @@ describe('convertImage with format=png', () => {
 
   it('should produce valid PNG via convertImage', async () => {
     const file = createMinimalFile();
-    const result = await convertImage(file, { format: 'png' }) as Buffer;
+    const result = (await convertImage(file, { format: 'png' })) as Buffer;
 
     expect(result.subarray(0, 4).equals(PNG_MAGIC)).toBe(true);
   }, 30000);
 
   it('should pass through scale option', async () => {
     const file = createMinimalFile();
-    const result1x = await convertImage(file, {
+    const result1x = (await convertImage(file, {
       format: 'png',
       scale: 1,
-    }) as Buffer;
-    const result3x = await convertImage(file, {
+    })) as Buffer;
+    const result3x = (await convertImage(file, {
       format: 'png',
       scale: 3,
-    }) as Buffer;
+    })) as Buffer;
 
     expect(result3x.length).toBeGreaterThan(result1x.length);
   }, 30000);
