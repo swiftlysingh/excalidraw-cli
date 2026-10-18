@@ -331,25 +331,40 @@ async function renderSvg(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const utils = await import('@excalidraw/utils') as any;
   const exportToSvg = utils.exportToSvg as (opts: {
-    elements: unknown[];
-    appState: Record<string, unknown>;
-    files: Record<string, unknown> | null;
-    exportPadding?: number;
+    data: {
+      elements: unknown[];
+      appState: Record<string, unknown>;
+      files: Record<string, unknown> | null;
+    };
+    config?: {
+      padding?: number;
+      theme?: 'light' | 'dark';
+      canvasBackgroundColor?: string | false;
+    };
   }) => Promise<{ outerHTML: string }>;
 
   const appState = {
     ...file.appState,
     exportBackground: opts.exportBackground,
+    exportPadding: opts.padding,
     viewBackgroundColor: opts.viewBackgroundColor,
     exportWithDarkMode: opts.dark,
     exportEmbedScene: opts.exportEmbedScene,
   };
 
   const svg = await exportToSvg({
-    elements: file.elements.filter((element) => !element.isDeleted) as unknown[],
-    appState: appState as Record<string, unknown>,
-    files: (file.files || {}) as Record<string, unknown>,
-    exportPadding: opts.padding,
+    data: {
+      elements: file.elements.filter((element) => !element.isDeleted) as unknown[],
+      appState: appState as Record<string, unknown>,
+      files: (file.files || {}) as Record<string, unknown>,
+    },
+    config: {
+      padding: opts.padding,
+      theme: opts.dark ? 'dark' : 'light',
+      canvasBackgroundColor: opts.exportBackground
+        ? opts.viewBackgroundColor
+        : false,
+    },
   });
 
   return svg.outerHTML;
