@@ -416,6 +416,43 @@ exit 99
     expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.4.0');
   });
 
+  it('retries a tag that does not contain the helper by loading it from the workflow commit', () => {
+    mockGh();
+    const workflowSha = 'workflow-sha';
+    writeFileSync(
+      join(directory, 'git'),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+case "$1" in
+  fetch) exit 0 ;;
+  show)
+    if [ "$2" = "${workflowSha}:.github/scripts/release-version.cjs" ]; then
+      cat "$HELPER_SOURCE"
+      exit 0
+    fi
+    exit 1
+    ;;
+  *) exit 99 ;;
+esac
+`,
+      { mode: 0o755 }
+    );
+    const result = runStep('Resolve previous release tag', {
+      RELEASE_TAG: 'v1.5.0',
+      GITHUB_WORKSPACE: directory,
+      GITHUB_SHA: workflowSha,
+      HELPER_SOURCE: resolve('.github/scripts/release-version.cjs'),
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.4.0');
+    const calls = readFileSync(join(directory, 'calls'), 'utf8');
+    expect(calls).toContain(`fetch --depth=1 origin ${workflowSha}`);
+    expect(calls).toContain(`show ${workflowSha}:.github/scripts/release-version.cjs`);
+    expect(() =>
+      readFileSync(join(directory, '.github/scripts/release-version.cjs'))
+    ).toThrow();
+  });
+
   it('omits a previous tag for the first published release', () => {
     mockGh();
     const result = runStep('Resolve previous release tag', {
@@ -442,12 +479,13 @@ exit 99
       previous_tag: '${{ steps.previous_release.outputs.tag }}',
     });
     const names = steps.map((step) => step.name);
-    expect(names.indexOf('Resolve previous release tag')).toBeLessThan(
-      names.indexOf('Create GitHub Release')
-    );
     expect(names.indexOf('Prepare release version')).toBeLessThan(
       names.indexOf('Resolve previous release tag')
     );
+    expect(names.indexOf('Resolve previous release tag')).toBeLessThan(
+      names.indexOf('Publish to npm')
+    );
+    expect(names.indexOf('Publish to npm')).toBeLessThan(names.indexOf('Create GitHub Release'));
   });
 });
 

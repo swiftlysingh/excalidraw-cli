@@ -131,6 +131,32 @@ jobs:
           git tag "$RELEASE_TAG"
           git push origin "refs/tags/$RELEASE_TAG"
 
+      - name: Resolve previous release tag
+        id: previous_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HELPER="$RUNNER_TEMP/release-version.cjs"
+          SOURCE=".github/scripts/release-version.cjs"
+          if [ -f "$GITHUB_WORKSPACE/$SOURCE" ]; then
+            cp "$GITHUB_WORKSPACE/$SOURCE" "$HELPER"
+          else
+            # Retry checks out the tag. Pre-helper tags do not contain this file,
+            # so load it from the commit that provided this workflow.
+            git fetch --depth=1 origin "$GITHUB_SHA"
+            git show "$GITHUB_SHA:$SOURCE" > "$HELPER"
+          fi
+          if [ ! -s "$HELPER" ]; then
+            echo "Failed to load $SOURCE from the workflow commit." >&2
+            exit 1
+          fi
+          gh api --paginate --slurp "/repos/${GITHUB_REPOSITORY}/releases" > "$RUNNER_TEMP/github-releases.json"
+          PREVIOUS_TAG=$(node "$HELPER" previous)
+          echo "tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Release notes compare against $PREVIOUS_TAG." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Publish to npm
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -153,18 +179,6 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Resolve previous release tag
-        id: previous_release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api --paginate --slurp "/repos/${GITHUB_REPOSITORY}/releases" > "$RUNNER_TEMP/github-releases.json"
-          PREVIOUS_TAG=$(node "$GITHUB_WORKSPACE/.github/scripts/release-version.cjs" previous)
-          echo "tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
-          if [ -n "$PREVIOUS_TAG" ]; then
-            echo "Release notes compare against $PREVIOUS_TAG." >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
