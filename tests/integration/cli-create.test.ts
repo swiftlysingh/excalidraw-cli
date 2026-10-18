@@ -57,7 +57,9 @@ describe('CLI create options', () => {
       '-',
     ]);
 
-    expect(inputSpacing.status).toBe(0);
+    expect(inputSpacing.status, inputSpacing.stderr).toBe(0);
+    expect(sameExplicitSpacing.status, sameExplicitSpacing.stderr).toBe(0);
+    expect(overriddenSpacing.status, overriddenSpacing.stderr).toBe(0);
     expect(nodePositions(inputSpacing.stdout)).toEqual(nodePositions(sameExplicitSpacing.stdout));
     expect(nodePositions(inputSpacing.stdout)).not.toEqual(nodePositions(overriddenSpacing.stdout));
   });

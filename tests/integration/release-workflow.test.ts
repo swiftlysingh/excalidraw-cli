@@ -7,8 +7,15 @@ import { spawnSync } from 'node:child_process';
 
 const { load } = createRequire(import.meta.url)('js-yaml');
 const workflow = load(readFileSync(resolve('.github/workflows/release.yml'), 'utf8'));
-const steps: { name: string; run?: string; if?: string }[] = workflow.jobs.release.steps;
+const steps: {
+  name: string;
+  run?: string;
+  if?: string;
+  uses?: string;
+  with?: Record<string, unknown>;
+}[] = workflow.jobs.release.steps;
 const version = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version;
+const workspace = resolve('.');
 let directory: string;
 
 function runStep(name: string, env: Record<string, string> = {}) {
@@ -21,6 +28,7 @@ function runStep(name: string, env: Record<string, string> = {}) {
       ...process.env,
       PATH: `${directory}:${process.env.PATH}`,
       RUNNER_TEMP: directory,
+      GITHUB_WORKSPACE: workspace,
       GIT_CONFIG_GLOBAL: join(directory, 'gitconfig'),
       GITHUB_OUTPUT: join(directory, 'output'),
       GITHUB_ENV: join(directory, 'env'),
@@ -40,6 +48,15 @@ function runStep(name: string, env: Record<string, string> = {}) {
       NPM_VERSIONS: JSON.stringify(['1.0.0']),
       NPM_VIEW_STATUS: '0',
       NPM_PUBLISH_STATUS: '0',
+      GH_STATUS: '0',
+      GITHUB_RELEASES: JSON.stringify([
+        [
+          { tag_name: 'v1.5.0', draft: false, prerelease: false },
+          { tag_name: 'v1.4.0', draft: false, prerelease: false },
+          { tag_name: 'v1.2.0', draft: false, prerelease: false },
+          { tag_name: 'v1.0.0', draft: false, prerelease: false },
+        ],
+      ]),
       ...env,
     },
   });
@@ -316,6 +333,18 @@ esac
     expect(JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')).version).toBe('1.5.0');
   });
 
+  it('does not skip an extra minor when the next computed version is already taken', () => {
+    git('tag', 'v1.4.0');
+    git('tag', 'v1.5.0');
+    const result = runStep('Prepare release version', {
+      MODE: 'new',
+      NPM_VERSIONS: JSON.stringify(['1.2.0', '1.4.0', '1.5.0']),
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(directory, 'env'), 'utf8')).toContain('RELEASE_TAG=v1.6.0');
+    expect(JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')).version).toBe('1.6.0');
+  });
+
   it('stops preparing a release when npm version metadata is unavailable', () => {
     expect(
       runStep('Prepare release version', { MODE: 'new', NPM_VIEW_STATUS: '1' }).status
@@ -347,6 +376,116 @@ esac
     expect(result.stderr).toContain('[rejected]');
     expect(git('rev-parse', 'v1.3.0')).not.toBe(original);
     expect(git('--git-dir=remote.git', 'rev-parse', 'v1.3.0')).toBe(original);
+  });
+});
+
+describe('previous published release tag', () => {
+  function mockGh() {
+    writeFileSync(
+      join(directory, 'gh'),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+if [ "$1" = "api" ]; then
+  printf '%s\\n' "$GITHUB_RELEASES"
+  exit "$GH_STATUS"
+fi
+exit 99
+`,
+      { mode: 0o755 }
+    );
+  }
+
+  it('pins notes to the highest published GitHub release below the new tag', () => {
+    mockGh();
+    const result = runStep('Resolve previous release tag', { RELEASE_TAG: 'v1.5.0' });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.4.0');
+    expect(readFileSync(join(directory, 'summary'), 'utf8')).toContain('v1.4.0');
+    expect(readFileSync(join(directory, 'calls'), 'utf8')).toContain(
+      'api --paginate --slurp /repos/swiftlysingh/excalidraw-cli/releases'
+    );
+  });
+
+  it('keeps retry mode on the existing tag and still selects the previous published release', () => {
+    mockGh();
+    expect(
+      runStep('Prepare release version', { MODE: 'retry', RELEASE_TAG: 'v1.5.0' }).status
+    ).toBe(0);
+    expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.5.0');
+    expect(runStep('Resolve previous release tag', { RELEASE_TAG: 'v1.5.0' }).status).toBe(0);
+    expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.4.0');
+  });
+
+  it('retries a tag that does not contain the helper by loading it from the workflow commit', () => {
+    mockGh();
+    const workflowSha = 'workflow-sha';
+    writeFileSync(
+      join(directory, 'git'),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+case "$1" in
+  fetch) exit 0 ;;
+  show)
+    if [ "$2" = "${workflowSha}:.github/scripts/release-version.cjs" ]; then
+      cat "$HELPER_SOURCE"
+      exit 0
+    fi
+    exit 1
+    ;;
+  *) exit 99 ;;
+esac
+`,
+      { mode: 0o755 }
+    );
+    const result = runStep('Resolve previous release tag', {
+      RELEASE_TAG: 'v1.5.0',
+      GITHUB_WORKSPACE: directory,
+      GITHUB_SHA: workflowSha,
+      HELPER_SOURCE: resolve('.github/scripts/release-version.cjs'),
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(directory, 'output'), 'utf8')).toContain('tag=v1.4.0');
+    const calls = readFileSync(join(directory, 'calls'), 'utf8');
+    expect(calls).toContain(`fetch --depth=1 origin ${workflowSha}`);
+    expect(calls).toContain(`show ${workflowSha}:.github/scripts/release-version.cjs`);
+    expect(() =>
+      readFileSync(join(directory, '.github/scripts/release-version.cjs'))
+    ).toThrow();
+  });
+
+  it('omits a previous tag for the first published release', () => {
+    mockGh();
+    const result = runStep('Resolve previous release tag', {
+      RELEASE_TAG: 'v1.0.0',
+      GITHUB_RELEASES: JSON.stringify([[{ tag_name: 'v1.0.0', draft: false, prerelease: false }]]),
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(directory, 'output'), 'utf8')).toBe('tag=\n');
+  });
+
+  it('stops when GitHub release metadata is unavailable or malformed', () => {
+    mockGh();
+    expect(runStep('Resolve previous release tag', { GH_STATUS: '1' }).status).not.toBe(0);
+    expect(
+      runStep('Resolve previous release tag', { GITHUB_RELEASES: 'not JSON' }).status
+    ).not.toBe(0);
+  });
+
+  it('passes the resolved previous tag into generated GitHub release notes', () => {
+    const release = steps.find((step) => step.name === 'Create GitHub Release');
+    expect(release?.uses).toBe('softprops/action-gh-release@v2');
+    expect(release?.with).toMatchObject({
+      generate_release_notes: true,
+      previous_tag: '${{ steps.previous_release.outputs.tag }}',
+    });
+    const names = steps.map((step) => step.name);
+    expect(names.indexOf('Prepare release version')).toBeLessThan(
+      names.indexOf('Resolve previous release tag')
+    );
+    expect(names.indexOf('Resolve previous release tag')).toBeLessThan(
+      names.indexOf('Publish to npm')
+    );
+    expect(names.indexOf('Publish to npm')).toBeLessThan(names.indexOf('Create GitHub Release'));
   });
 });
 

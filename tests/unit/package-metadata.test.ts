@@ -73,7 +73,7 @@ describe('package metadata', () => {
     expect(manPage).toContain(`excalidraw-cli ${packageJson.version}`);
   });
 
-  it('stays ahead of every stable git tag so the next release cannot reuse one', () => {
+  it('is not behind any stable git tag', () => {
     const pkg = parseStableVersion(packageJson.version);
     expect(pkg).not.toBeNull();
 
@@ -89,8 +89,11 @@ describe('package metadata', () => {
       .filter((value): value is [number, number, number] => value !== null);
     expect(tagged.length).toBeGreaterThan(0);
 
+    // Off-main releases leave package.json on main equal to the latest tag.
+    // Reuse is prevented by the release workflow, which picks the next unused
+    // minor from tags and npm. This only fails when main has gone backwards.
     for (const tag of tagged) {
-      expect(pkg![0] - tag[0] || pkg![1] - tag[1] || pkg![2] - tag[2]).toBeGreaterThan(0);
+      expect(pkg![0] - tag[0] || pkg![1] - tag[1] || pkg![2] - tag[2]).toBeGreaterThanOrEqual(0);
     }
   });
 

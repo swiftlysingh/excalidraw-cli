@@ -75,34 +75,7 @@ jobs:
             git tag --list > "$RUNNER_TEMP/release-tags"
             PACKAGE_NAME=$(node -p "require('./package.json').name")
             npm view "$PACKAGE_NAME" versions --json > "$RUNNER_TEMP/npm-versions.json"
-            VERSION=$(node --input-type=commonjs <<'NODE'
-          const fs = require('node:fs');
-          const parse = (value) => {
-            const match = String(value).match(/^(?:v)?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/);
-            return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
-          };
-          const compare = (a, b) => b[0] - a[0] || b[1] - a[1] || b[2] - a[2];
-          const fromTags = fs.readFileSync(`${process.env.RUNNER_TEMP}/release-tags`, 'utf8')
-            .split('\n')
-            .map(parse)
-            .filter(Boolean);
-          const npmVersions = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/npm-versions.json`, 'utf8'));
-          if (!Array.isArray(npmVersions) || !npmVersions.every(value => typeof value === 'string')) {
-            throw new Error('Unexpected npm versions response');
-          }
-          const fromNpm = npmVersions.map(parse).filter(Boolean);
-          const versions = [...fromTags, ...fromNpm].sort(compare);
-          if (!versions.length) throw new Error('No stable release version found.');
-          const used = new Set(versions.map(([major, minor, patch]) => `${major}.${minor}.${patch}`));
-          let [major, minor] = versions[0];
-          let next = `${major}.${minor + 1}.0`;
-          while (used.has(next)) {
-            minor += 1;
-            next = `${major}.${minor + 1}.0`;
-          }
-          console.log(next);
-          NODE
-            )
+            VERSION=$(node "$GITHUB_WORKSPACE/.github/scripts/release-version.cjs" next)
             npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts
             RELEASE_TAG="v$VERSION"
           fi
@@ -158,6 +131,32 @@ jobs:
           git tag "$RELEASE_TAG"
           git push origin "refs/tags/$RELEASE_TAG"
 
+      - name: Resolve previous release tag
+        id: previous_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HELPER="$RUNNER_TEMP/release-version.cjs"
+          SOURCE=".github/scripts/release-version.cjs"
+          if [ -f "$GITHUB_WORKSPACE/$SOURCE" ]; then
+            cp "$GITHUB_WORKSPACE/$SOURCE" "$HELPER"
+          else
+            # Retry checks out the tag. Pre-helper tags do not contain this file,
+            # so load it from the commit that provided this workflow.
+            git fetch --depth=1 origin "$GITHUB_SHA"
+            git show "$GITHUB_SHA:$SOURCE" > "$HELPER"
+          fi
+          if [ ! -s "$HELPER" ]; then
+            echo "Failed to load $SOURCE from the workflow commit." >&2
+            exit 1
+          fi
+          gh api --paginate --slurp "/repos/${GITHUB_REPOSITORY}/releases" > "$RUNNER_TEMP/github-releases.json"
+          PREVIOUS_TAG=$(node "$HELPER" previous)
+          echo "tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Release notes compare against $PREVIOUS_TAG." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Publish to npm
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -187,6 +186,9 @@ jobs:
           tag_name: ${{ steps.release_tag.outputs.tag }}
           name: ${{ steps.release_tag.outputs.tag }}
           generate_release_notes: true
+          # GitHub otherwise picks the latest ancestor tag, which misses off-main
+          # release commits and compared v1.5.0 against v1.2.0 instead of v1.4.0.
+          previous_tag: ${{ steps.previous_release.outputs.tag }}
           body: |
             ## Installation
             ```bash
