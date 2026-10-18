@@ -398,9 +398,10 @@ function estimateTextBox(
  *
  * Labelled arrows are masked with a hole the size of the bound text so the
  * line does not run through the label. Some files store a negative or
- * arrow-sized height on that text (common for angled arrows). The hole then
- * covers the stroke and only the arrowheads remain. Restore linear
- * width/height from points and give bound labels a text-sized box.
+ * arrow-sized box on that text (angled arrows often inherit height; horizontal
+ * arrows often inherit width). The hole then covers the stroke and only the
+ * arrowheads remain. Restore linear width/height from points and give bound
+ * labels a text-sized box, repairing each dimension independently.
  */
 export function normalizeElementsForExport(
   elements: readonly ExcalidrawElement[]
@@ -429,22 +430,24 @@ export function normalizeElementsForExport(
       fontSize,
       lineHeight
     );
-    const invalidBox =
+    const boundToLinear = Boolean(container && isLinearElement(container));
+    const needsWidthRepair =
       !Number.isFinite(textElement.width) ||
-      !Number.isFinite(textElement.height) ||
       textElement.width <= 0 ||
-      textElement.height <= 0;
-    const inheritedLinearBox =
-      Boolean(container && isLinearElement(container)) && textElement.height > estimated.height * 4;
+      (boundToLinear && textElement.width > estimated.width * 2);
+    const needsHeightRepair =
+      !Number.isFinite(textElement.height) ||
+      textElement.height <= 0 ||
+      (boundToLinear && textElement.height > estimated.height * 2);
 
-    if (!invalidBox && !inheritedLinearBox) {
+    if (!needsWidthRepair && !needsHeightRepair) {
       return textElement;
     }
 
     return {
       ...textElement,
-      width: textElement.width > 0 ? textElement.width : estimated.width,
-      height: estimated.height,
+      width: needsWidthRepair ? estimated.width : textElement.width,
+      height: needsHeightRepair ? estimated.height : textElement.height,
     };
   });
 }

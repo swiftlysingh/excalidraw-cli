@@ -29,4 +29,21 @@ describe('normalizeElementsForExport', () => {
 
     expect(label).toMatchObject({ width: 72, height: 20 });
   });
+
+  it('repairs inherited arrow-wide label width even when height is valid', () => {
+    const file = createLabeledAngledArrowFile();
+    const original = file.elements.find((element) => element.id === 'label');
+    if (!original || original.type !== 'text') {
+      throw new Error('expected bound text fixture');
+    }
+    original.width = 200;
+    original.height = 20;
+
+    const normalized = normalizeElementsForExport(file.elements);
+    const label = normalized.find((element) => element.id === 'label');
+
+    expect(label?.height).toBe(20);
+    expect(label?.width).toBeGreaterThan(0);
+    expect(label?.width).toBeLessThan(120);
+  });
 });
