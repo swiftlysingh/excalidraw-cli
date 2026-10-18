@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,10 +33,11 @@ describe('packed CLI', () => {
   beforeAll(() => {
     prefix = mkdtempSync(join(tmpdir(), 'excalidraw-cli-pack-'));
     work = mkdtempSync(join(tmpdir(), 'excalidraw-cli-e2e-'));
-    execFileSync('npm', ['run', 'build'], {
-      cwd: PROJECT_ROOT,
-      encoding: 'utf8',
-    });
+    // Do not rebuild dist here: other files spawn dist/cli.js in parallel, and
+    // tsc rewriting those files mid-run makes create exit 1.
+    if (!existsSync(join(PROJECT_ROOT, 'dist/cli.js'))) {
+      throw new Error('dist/cli.js is missing; run npm run build before tests');
+    }
     const tarball = execFileSync('npm', ['pack', '--pack-destination', prefix], {
       cwd: PROJECT_ROOT,
       encoding: 'utf8',
