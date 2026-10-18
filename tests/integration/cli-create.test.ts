@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -100,4 +100,24 @@ describe('CLI create options', () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain(message);
   });
+
+  it.each(['png', 'svg'] as const)(
+    'rejects create -o *.%s instead of writing JSON into an image path',
+    (ext) => {
+      const tmpDir = join(PROJECT_ROOT, 'tests', 'tmp');
+      mkdirSync(tmpDir, { recursive: true });
+      const output = join(tmpDir, `create-image-trap.${ext}`);
+      if (existsSync(output)) {
+        unlinkSync(output);
+      }
+
+      const result = runCLI(['create', '--inline', '[A] -> [B]', '--output', output]);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toContain(`create writes Excalidraw JSON, not ${ext.toUpperCase()}`);
+      expect(result.stderr).toContain(`convert --format ${ext}`);
+      expect(existsSync(output)).toBe(false);
+    }
+  );
 });

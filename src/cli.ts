@@ -23,6 +23,17 @@ const packageMetadata = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
 ) as { version: string };
 
+function imageFormatFromOutputPath(outputPath: string): 'png' | 'svg' | null {
+  const lower = outputPath.toLowerCase();
+  if (lower.endsWith('.png')) {
+    return 'png';
+  }
+  if (lower.endsWith('.svg')) {
+    return 'svg';
+  }
+  return null;
+}
+
 program
   .name('excalidraw-cli')
   .description('Create Excalidraw flowcharts from DSL, JSON, or DOT')
@@ -44,6 +55,14 @@ program
   .option('--verbose', 'Verbose output')
   .action(async (inputFile, options, command) => {
     try {
+      const imageFormat = imageFormatFromOutputPath(options.output);
+      if (imageFormat) {
+        throw new Error(
+          `create writes Excalidraw JSON, not ${imageFormat.toUpperCase()}. ` +
+            `Use convert --format ${imageFormat} after create, or pass a .excalidraw output path.`
+        );
+      }
+
       let input: string;
       let format = options.format;
       const formatExplicitlySet = command.getOptionValueSource('format') === 'cli';
