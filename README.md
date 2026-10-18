@@ -25,7 +25,7 @@
 
 Requires `Node >=20.19.0`. Node 18 is no longer supported.
 
-Styling and extended arrow syntax require version 1.3.0 or later.
+Styling and extended arrow syntax require version 1.4.0 or later.
 See the [releases](https://github.com/swiftlysingh/excalidraw-cli/releases) for published versions.
 
 ### Using npm

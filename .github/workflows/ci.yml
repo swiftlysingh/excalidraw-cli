@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -57,3 +59,28 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+
+      - name: Check package version is not behind npm
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          npm view "$PACKAGE_NAME" versions --json > "$RUNNER_TEMP/npm-versions.json"
+          node --input-type=commonjs <<'NODE'
+          const fs = require('node:fs');
+          const { version } = require('./package.json');
+          const parse = (value) => {
+            const match = String(value).match(/^(?:v)?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/);
+            return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+          };
+          const pkg = parse(version);
+          if (!pkg) throw new Error(`Invalid package.json version: ${version}`);
+          const versions = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/npm-versions.json`, 'utf8'));
+          if (!Array.isArray(versions) || !versions.every(value => typeof value === 'string')) {
+            throw new Error('Unexpected npm versions response');
+          }
+          const published = versions.map(parse).filter(Boolean)
+            .sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+          const latest = published.at(-1);
+          if (latest && (pkg[0] - latest[0] || pkg[1] - latest[1] || pkg[2] - latest[2]) < 0) {
+            throw new Error(`package.json ${version} is behind npm ${latest.join('.')}`);
+          }
+          NODE

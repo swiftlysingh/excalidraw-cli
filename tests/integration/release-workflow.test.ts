@@ -228,7 +228,32 @@ describe('automatic minor releases', () => {
   }
 
   beforeEach(() => {
-    rmSync(join(directory, 'npm'));
+    writeFileSync(
+      join(directory, 'npm'),
+      `#!/bin/bash
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+case "$1" in
+  view) printf '%s\\n' "$NPM_VERSIONS"; exit "$NPM_VIEW_STATUS" ;;
+  version)
+    node --input-type=commonjs -e '
+      const fs = require("node:fs");
+      const next = process.argv[1];
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+      pkg.version = next;
+      fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\\n");
+      try {
+        const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+        lock.version = next;
+        if (lock.packages && lock.packages[""]) lock.packages[""].version = next;
+        fs.writeFileSync("package-lock.json", JSON.stringify(lock, null, 2) + "\\n");
+      } catch {}
+    ' "$2"
+    ;;
+  *) exit 99 ;;
+esac
+`,
+      { mode: 0o755 }
+    );
     writeFileSync(
       join(directory, 'package-lock.json'),
       JSON.stringify({
@@ -278,6 +303,23 @@ describe('automatic minor releases', () => {
     expect(JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')).version).toBe(
       '1.11.0'
     );
+  });
+
+  it('increments from the highest npm version when it is ahead of git tags', () => {
+    git('tag', 'v1.3.0');
+    const result = runStep('Prepare release version', {
+      MODE: 'new',
+      NPM_VERSIONS: JSON.stringify(['1.1.0', '1.2.0', '1.4.0']),
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(directory, 'env'), 'utf8')).toContain('RELEASE_TAG=v1.5.0');
+    expect(JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')).version).toBe('1.5.0');
+  });
+
+  it('stops preparing a release when npm version metadata is unavailable', () => {
+    expect(
+      runStep('Prepare release version', { MODE: 'new', NPM_VIEW_STATUS: '1' }).status
+    ).not.toBe(0);
   });
 
   it('retries without modifying package files or creating another tag', () => {

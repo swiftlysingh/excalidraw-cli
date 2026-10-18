@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.3.0 - Unreleased
+## 1.5.0 - Unreleased
+
+### Changed
+
+- Keep package.json, git tags, the changelog, and the release workflow on one version line so the next release cannot skip a published version.
+- Wait for npm release artifacts to become available before hashing them.
+- Configure Git identity before creating the Homebrew tap.
+
+## 1.4.0 - 2026-09-21
 
 ### Changed
 
@@ -16,7 +24,11 @@
 - Preserve input-defined spacing unless `--spacing` is explicitly provided.
 - Render reverse DSL arrows and undirected DOT edges with the correct arrowheads.
 - Reject malformed DSL and invalid CLI format, direction, and spacing values.
-- Report version 1.3.0 consistently from the CLI.
+- Report the package version consistently from the CLI.
+
+## 1.3.0 - Skipped
+
+- Tagged in git as v1.3.0 but never published to npm. The work shipped as 1.4.0.
 
 ## 1.2.0 - 2026-03-16
 
