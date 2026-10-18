@@ -7,9 +7,10 @@ import { fileURLToPath } from 'node:url';
 
 const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CLI_PATH = join(PROJECT_ROOT, 'dist', 'cli.js');
-const SKILL_DIR = join(PROJECT_ROOT, 'skills', 'excalidraw');
+const SKILL_DIR = join(PROJECT_ROOT, 'skills', 'excalidraw-cli');
 const SKILL_PATH = join(SKILL_DIR, 'SKILL.md');
 const EXAMPLES_DIR = join(SKILL_DIR, 'examples');
+const PLUGIN_MANIFEST_PATH = join(PROJECT_ROOT, '.claude-plugin', 'plugin.json');
 
 function extractFencedBlocks(markdown: string): Array<{ lang: string; body: string }> {
   const blocks: Array<{ lang: string; body: string }> = [];
@@ -45,9 +46,30 @@ describe('agent skill examples', () => {
 
   it('keeps Agent Skills frontmatter valid', () => {
     expect(skill.startsWith('---\n')).toBe(true);
-    expect(skill).toMatch(/^name: excalidraw$/m);
+    expect(skill).toMatch(/^name: excalidraw-cli$/m);
     expect(skill).toMatch(/^description: .+/m);
     expect(skill).toMatch(/^license: MIT$/m);
+    expect(skill).not.toContain('swiftlysingh/excalidraw-skill');
+    expect(skill).toContain('https://github.com/swiftlysingh/excalidraw-cli');
+  });
+
+  it('declares a skills-only Claude Code plugin at the repo root', () => {
+    const plugin = JSON.parse(readFileSync(PLUGIN_MANIFEST_PATH, 'utf8')) as {
+      name: string;
+      description: string;
+      homepage: string;
+      repository: string;
+      license: string;
+      author: { name: string };
+    };
+
+    expect(plugin.name).toBe('excalidraw-cli');
+    expect(plugin.description.length).toBeGreaterThan(0);
+    expect(plugin.author.name).toBe('swiftlysingh');
+    expect(plugin.homepage).toBe('https://github.com/swiftlysingh/excalidraw-cli');
+    expect(plugin.repository).toBe('https://github.com/swiftlysingh/excalidraw-cli');
+    expect(plugin.license).toBe('MIT');
+    expect(JSON.stringify(plugin)).not.toContain('swiftlysingh/excalidraw-skill');
   });
 
   it('runs every bash example against the built CLI', { timeout: 180000 }, () => {

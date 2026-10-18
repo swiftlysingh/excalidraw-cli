@@ -1,0 +1,14 @@
+{
+  "name": "excalidraw-cli",
+  "displayName": "Excalidraw CLI",
+  "version": "1.0.0",
+  "description": "Create Excalidraw flowcharts and diagrams from DSL, JSON, or Graphviz DOT, then export PNG or SVG.",
+  "author": {
+    "name": "swiftlysingh",
+    "url": "https://github.com/swiftlysingh"
+  },
+  "homepage": "https://github.com/swiftlysingh/excalidraw-cli",
+  "repository": "https://github.com/swiftlysingh/excalidraw-cli",
+  "license": "MIT",
+  "keywords": ["excalidraw", "flowchart", "diagram", "cli"]
+}
