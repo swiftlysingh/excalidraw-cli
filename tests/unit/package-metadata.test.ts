@@ -37,6 +37,17 @@ function lockedPackageVersion(lockfile: Record<string, unknown>, name: string): 
   return version;
 }
 
+function rootLockfileDependencyVersion(lockfile: Record<string, unknown>, name: string): string {
+  const packages = lockfile.packages as
+    | Record<string, { dependencies?: Record<string, string> }>
+    | undefined;
+  const version = packages?.['']?.dependencies?.[name];
+  if (!version) {
+    throw new Error(`missing ${name} root lockfile dependency`);
+  }
+  return version;
+}
+
 /** True for versions like 0.1.3-test32; false for 0.1.5 or ^0.1.5. */
 function isPrereleaseRange(version: string): boolean {
   const stripped = version.replace(/^[~^>=<\s]+/, '');
@@ -87,9 +98,11 @@ describe('package metadata', () => {
     const pkg = readJson('package.json');
     const lockfile = readJson('package-lock.json');
     const declared = declaredDependencyVersion(pkg, '@excalidraw/utils');
+    const lockfileDeclared = rootLockfileDependencyVersion(lockfile, '@excalidraw/utils');
     const locked = lockedPackageVersion(lockfile, '@excalidraw/utils');
 
     expect(isPrereleaseRange(declared)).toBe(false);
+    expect(isPrereleaseRange(lockfileDeclared)).toBe(false);
     expect(isPrereleaseRange(locked)).toBe(false);
     expect(locked).toBe(declared.replace(/^[~^>=<\s]+/, ''));
   });
