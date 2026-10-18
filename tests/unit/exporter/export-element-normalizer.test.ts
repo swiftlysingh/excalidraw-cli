@@ -5,6 +5,13 @@ import { createLabeledAngledArrowFile } from '../../helpers/fixtures.js';
 describe('normalizeElementsForExport', () => {
   it('restores labeled arrow boxes so the SVG mask hole cannot cover the stroke', () => {
     const file = createLabeledAngledArrowFile();
+    const sourceDimensions = file.elements
+      .filter((element) => element.id === 'ab' || element.id === 'label')
+      .map((element) => ({
+        id: element.id,
+        width: element.width,
+        height: element.height,
+      }));
     const normalized = normalizeElementsForExport(file.elements);
     const arrow = normalized.find((element) => element.id === 'ab');
     const label = normalized.find((element) => element.id === 'label');
@@ -13,6 +20,15 @@ describe('normalizeElementsForExport', () => {
     expect(label?.width).toBeGreaterThan(0);
     expect(label?.height).toBeGreaterThan(0);
     expect(label?.height).toBeLessThan(40);
+    expect(
+      file.elements
+        .filter((element) => element.id === 'ab' || element.id === 'label')
+        .map((element) => ({
+          id: element.id,
+          width: element.width,
+          height: element.height,
+        }))
+    ).toEqual(sourceDimensions);
   });
 
   it('leaves already-valid bound labels unchanged', () => {
