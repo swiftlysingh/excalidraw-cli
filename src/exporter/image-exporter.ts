@@ -431,6 +431,8 @@ export function normalizeElementsForExport(
       lineHeight
     );
     const boundToLinear = Boolean(container && isLinearElement(container));
+    const boundLinearHeight =
+      container && isLinearElement(container) ? Math.abs(container.height) : 0;
     const needsWidthRepair =
       !Number.isFinite(textElement.width) ||
       textElement.width <= 0 ||
@@ -438,7 +440,9 @@ export function normalizeElementsForExport(
     const needsHeightRepair =
       !Number.isFinite(textElement.height) ||
       textElement.height <= 0 ||
-      (boundToLinear && textElement.height > estimated.height * 2);
+      (boundToLinear &&
+        (textElement.height > estimated.height * 2 ||
+          (boundLinearHeight > 0 && textElement.height >= boundLinearHeight)));
 
     if (!needsWidthRepair && !needsHeightRepair) {
       return textElement;

@@ -46,4 +46,23 @@ describe('normalizeElementsForExport', () => {
     expect(label?.width).toBeGreaterThan(0);
     expect(label?.width).toBeLessThan(120);
   });
+
+  it('repairs a positive label height that matches the bound arrow height', () => {
+    const file = createLabeledAngledArrowFile();
+    const arrow = file.elements.find((element) => element.id === 'ab');
+    const original = file.elements.find((element) => element.id === 'label');
+    if (!arrow || arrow.type !== 'arrow' || !original || original.type !== 'text') {
+      throw new Error('expected labeled arrow fixture');
+    }
+    arrow.height = 40;
+    original.width = 72;
+    original.height = 40;
+
+    const normalized = normalizeElementsForExport(file.elements);
+    const label = normalized.find((element) => element.id === 'label');
+
+    expect(label).toMatchObject({ width: 72 });
+    expect(label?.height).toBeGreaterThan(0);
+    expect(label?.height).toBeLessThan(40);
+  });
 });
