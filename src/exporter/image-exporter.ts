@@ -12,7 +12,13 @@
 import { parse, format } from 'node:path';
 import { JSDOM } from 'jsdom';
 import { withDOMPolyfill, getExcalidrawAssetDir } from './dom-polyfill.js';
-import type { ExcalidrawFile } from '../types/excalidraw.js';
+import type {
+  ExcalidrawArrow,
+  ExcalidrawElement,
+  ExcalidrawFile,
+  ExcalidrawLine,
+  ExcalidrawText,
+} from '../types/excalidraw.js';
 
 /**
  * Export options matching Excalidraw website capabilities
@@ -65,10 +71,7 @@ export const DEFAULT_EXPORT_OPTIONS: Required<ExportOptions> = {
  * @param options - Partial options supplied by the caller.
  * @returns Fully-resolved options with every field populated.
  */
-function resolveOptions(
-  file: ExcalidrawFile,
-  options: ExportOptions
-): Required<ExportOptions> {
+function resolveOptions(file: ExcalidrawFile, options: ExportOptions): Required<ExportOptions> {
   return {
     ...DEFAULT_EXPORT_OPTIONS,
     ...options,
@@ -138,10 +141,7 @@ export async function convertToPNG(
     const widthMatch = normalizedSvg.match(/width="([^"]+)"/);
     const naturalWidth = widthMatch ? parseFloat(widthMatch[1]) : 800;
 
-    const scale =
-      typeof opts.scale === 'number' && Number.isFinite(opts.scale)
-        ? opts.scale
-        : 1;
+    const scale = typeof opts.scale === 'number' && Number.isFinite(opts.scale) ? opts.scale : 1;
     const safeScale = Math.min(Math.max(scale, 0.1), 10);
     const scaledWidth = Math.max(1, Math.round(naturalWidth * safeScale));
 
@@ -324,12 +324,9 @@ async function withExporterRuntime<T>(callback: () => Promise<T>): Promise<T> {
   });
 }
 
-async function renderSvg(
-  file: ExcalidrawFile,
-  opts: Required<ExportOptions>
-): Promise<string> {
+async function renderSvg(file: ExcalidrawFile, opts: Required<ExportOptions>): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const utils = await import('@excalidraw/utils') as any;
+  const utils = (await import('@excalidraw/utils')) as any;
   const exportToSvg = utils.exportToSvg as (opts: {
     data: {
       elements: unknown[];
@@ -354,7 +351,7 @@ async function renderSvg(
 
   const svg = await exportToSvg({
     data: {
-      elements: file.elements.filter((element) => !element.isDeleted) as unknown[],
+      elements: normalizeElementsForExport(file.elements) as unknown[],
       appState: appState as Record<string, unknown>,
       files: (file.files || {}) as Record<string, unknown>,
     },
@@ -368,4 +365,98 @@ async function renderSvg(
   });
 
   return svg.outerHTML;
+}
+
+function isLinearElement(element: ExcalidrawElement): element is ExcalidrawArrow | ExcalidrawLine {
+  return element.type === 'arrow' || element.type === 'line';
+}
+
+function sizeFromPoints(points: Array<[number, number]>): { width: number; height: number } {
+  const xs = points.map((point) => point[0]);
+  const ys = points.map((point) => point[1]);
+  return {
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+  };
+}
+
+function estimateTextBox(
+  text: string,
+  fontSize: number,
+  lineHeight: number
+): { width: number; height: number } {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  const maxLineLength = Math.max(1, ...lines.map((line) => line.length));
+  return {
+    width: maxLineLength * fontSize * 0.6,
+    height: Math.max(1, lines.length) * fontSize * lineHeight,
+  };
+}
+
+/**
+ * Repair element boxes that confuse SVG export.
+ *
+ * Labelled arrows are masked with a hole the size of the bound text so the
+ * line does not run through the label. Some files store a negative or
+ * arrow-sized box on that text (angled arrows often inherit height; horizontal
+ * arrows often inherit width). The hole then covers the stroke and only the
+ * arrowheads remain. Restore linear width/height from points and give bound
+ * labels a text-sized box, repairing each dimension independently.
+ */
+export function normalizeElementsForExport(
+  elements: readonly ExcalidrawElement[]
+): ExcalidrawElement[] {
+  const live = elements.filter((element) => !element.isDeleted);
+  const byId = new Map(live.map((element) => [element.id, element]));
+
+  return live.map((element) => {
+    if (isLinearElement(element) && element.points.length > 0) {
+      const size = sizeFromPoints(element.points);
+      if (element.width !== size.width || element.height !== size.height) {
+        element = { ...element, width: size.width, height: size.height };
+      }
+    }
+
+    if (element.type !== 'text') {
+      return element;
+    }
+
+    const textElement = element as ExcalidrawText;
+    const container = textElement.containerId ? byId.get(textElement.containerId) : undefined;
+    const fontSize = textElement.fontSize || 20;
+    const lineHeight = textElement.lineHeight || 1.25;
+    const estimated = estimateTextBox(
+      textElement.text || textElement.originalText || '',
+      fontSize,
+      lineHeight
+    );
+    const boundToLinear = Boolean(container && isLinearElement(container));
+    let boundLinearHeight = 0;
+    if (container && isLinearElement(container)) {
+      boundLinearHeight =
+        container.points.length > 0
+          ? sizeFromPoints(container.points).height
+          : Math.abs(container.height);
+    }
+    const needsWidthRepair =
+      !Number.isFinite(textElement.width) ||
+      textElement.width <= 0 ||
+      (boundToLinear && textElement.width > estimated.width * 2);
+    const needsHeightRepair =
+      !Number.isFinite(textElement.height) ||
+      textElement.height <= 0 ||
+      (boundToLinear &&
+        (textElement.height > estimated.height * 2 ||
+          (boundLinearHeight > 0 && textElement.height >= boundLinearHeight)));
+
+    if (!needsWidthRepair && !needsHeightRepair) {
+      return textElement;
+    }
+
+    return {
+      ...textElement,
+      width: needsWidthRepair ? estimated.width : textElement.width,
+      height: needsHeightRepair ? estimated.height : textElement.height,
+    };
+  });
 }
