@@ -61,6 +61,16 @@ npm link  # Makes 'excalidraw-cli' available globally
 npx --yes @swiftlysingh/excalidraw-cli create --inline "[A] -> [B]" -o diagram.excalidraw
 ```
 
+## Use with AI agents
+
+Coding agents (Claude Code, Codex, Cursor) can draw diagrams with this CLI from the bundled skill.
+
+```bash
+npx skills add swiftlysingh/excalidraw-cli
+```
+
+Or copy `skills/excalidraw` into `~/.claude/skills`, `~/.cursor/skills`, or `~/.codex/skills`.
+
 ## Quick Start
 
 ### Create from DSL
