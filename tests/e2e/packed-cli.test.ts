@@ -33,6 +33,10 @@ describe('packed CLI', () => {
   beforeAll(() => {
     prefix = mkdtempSync(join(tmpdir(), 'excalidraw-cli-pack-'));
     work = mkdtempSync(join(tmpdir(), 'excalidraw-cli-e2e-'));
+    execFileSync('npm', ['run', 'build'], {
+      cwd: PROJECT_ROOT,
+      encoding: 'utf8',
+    });
     const tarball = execFileSync('npm', ['pack', '--pack-destination', prefix], {
       cwd: PROJECT_ROOT,
       encoding: 'utf8',
@@ -42,7 +46,7 @@ describe('packed CLI', () => {
       encoding: 'utf8',
     });
     bin = join(prefix, 'node_modules', '.bin', 'excalidraw-cli');
-  }, 60000);
+  }, 90000);
 
   afterAll(() => {
     rmSync(prefix, { recursive: true, force: true });
