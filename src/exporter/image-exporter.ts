@@ -431,8 +431,13 @@ export function normalizeElementsForExport(
       lineHeight
     );
     const boundToLinear = Boolean(container && isLinearElement(container));
-    const boundLinearHeight =
-      container && isLinearElement(container) ? Math.abs(container.height) : 0;
+    let boundLinearHeight = 0;
+    if (container && isLinearElement(container)) {
+      boundLinearHeight =
+        container.points.length > 0
+          ? sizeFromPoints(container.points).height
+          : Math.abs(container.height);
+    }
     const needsWidthRepair =
       !Number.isFinite(textElement.width) ||
       textElement.width <= 0 ||
