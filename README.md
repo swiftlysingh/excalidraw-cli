@@ -6,7 +6,7 @@
 
 Generate Excalidraw diagrams and flowcharts from code or text. Built for agents and scripts.
 
-The official [`@excalidraw/cli`](https://www.npmjs.com/package/@excalidraw/cli) (launched October 2026) manages Excalidraw+ workspaces and renders existing `.excalidraw` files to PNG. This package generates those diagrams from DSL, JSON, or Graphviz DOT.
+This package generates diagrams from DSL, JSON, or Graphviz DOT.
 
 <p align="center">
   <img alt="This repository's src/ turned into an architecture diagram with excalidraw-cli" src="docs/demo.gif" />
@@ -314,4 +314,4 @@ MIT
 
 ## Also by me
 
-I also make [Holder](https://apps.apple.com/app/id6475649492?ct=excalidraw-readme) and [RetroBudget](https://apps.apple.com/app/id6743363764?ct=excalidraw-readme) for iPhone, plus [SpaceDash](https://github.com/swiftlysingh/SpaceDash?ref=excalidraw-cli), an open-source spaceflight dashboard.
+I also make [Holder](https://apps.apple.com/app/id6475649492?ct=excalidraw-readme) and [RetroBudget](https://apps.apple.com/app/id6743363764?ct=excalidraw-readme) for iPhone.
