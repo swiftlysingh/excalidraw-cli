@@ -4,12 +4,10 @@
   <a href="https://github.com/swiftlysingh/excalidraw-cli/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
 </p>
 
-<p align="center">
-  <img alt="image" src="https://github.com/user-attachments/assets/5af4b002-bd69-4187-8836-84135685117a" />
-</p>
+Generate Excalidraw diagrams from DSL, JSON, or Graphviz DOT. Built for agents and scripts.
 
 <p align="center">
-  Create Excalidraw flowcharts and diagrams from text-based DSL, JSON, or Graphviz DOT.
+  <img alt="This repository's src/ turned into an architecture diagram with excalidraw-cli" src="docs/demo.gif" />
 </p>
 
 ## Features
@@ -323,3 +321,7 @@ tag. A retry does not bump the version.
 ## License
 
 MIT
+
+## Other apps
+
+I also build [Holder](https://apps.apple.com/app/id6475649492) for storing cards and [RetroBudget](https://apps.apple.com/app/id6743363764) for tracking spending on iPhone.
