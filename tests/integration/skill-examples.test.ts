@@ -23,7 +23,7 @@ function extractFencedBlocks(markdown: string): Array<{ lang: string; body: stri
 }
 
 function runBash(script: string, cwd: string): { status: number; stdout: string; stderr: string } {
-  const result = spawnSync('bash', ['-lc', script], {
+  const result = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', script], {
     cwd,
     encoding: 'utf8',
     timeout: 60000,

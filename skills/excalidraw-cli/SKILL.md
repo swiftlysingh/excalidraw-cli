@@ -1,6 +1,6 @@
 ---
 name: excalidraw-cli
-description: Create Excalidraw flowcharts and diagrams from DSL, JSON, or Graphviz DOT with excalidraw-cli, then export PNG or SVG. Use when the user asks to create a flowchart, draw a diagram, visualize a process, make an architecture or flow diagram, convert an Excalidraw file, or mentions excalidraw.
+description: Create editable Excalidraw flowcharts and diagrams, or export .excalidraw files to PNG or SVG.
 license: MIT
 compatibility: Requires Node.js >=20.19.0 and excalidraw-cli (this repo after npm run build, a global install, or npx --yes @swiftlysingh/excalidraw-cli).
 ---
