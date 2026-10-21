@@ -6,8 +6,6 @@
 
 Generate Excalidraw diagrams and flowcharts from code or text. Built for agents and scripts.
 
-This package generates diagrams from DSL, JSON, or Graphviz DOT.
-
 <p align="center">
   <img alt="This repository's src/ turned into an architecture diagram with excalidraw-cli" src="docs/demo.gif" />
 </p>
