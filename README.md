@@ -63,19 +63,15 @@ npx --yes @swiftlysingh/excalidraw-cli create --inline "[A] -> [B]" -o diagram.e
 
 ## Use with AI agents
 
-Coding agents (Claude Code, Codex, Cursor) can draw diagrams with this CLI from the bundled skill at [`skills/excalidraw-cli`](skills/excalidraw-cli).
-
-Install it with [skills.sh](https://skills.sh):
+Install the [Excalidraw skill](skills/excalidraw-cli) for Claude Code, Codex, or Cursor:
 
 ```bash
 npx skills add swiftlysingh/excalidraw-cli
 ```
 
-That command looks for `skills/<name>/SKILL.md` in this repo. The skill name is `excalidraw-cli`, so the path it installs is `skills/excalidraw-cli/`.
-
 Or copy `skills/excalidraw-cli` into `~/.claude/skills`, `~/.cursor/skills`, or `~/.codex/skills`.
 
-This repo is also a skills-only Claude Code plugin (`.claude-plugin/plugin.json` at the repository root, with the skill under `skills/excalidraw-cli/`).
+Also available as a [Claude Code plugin](.claude-plugin/plugin.json).
 
 ## Quick Start
 
