@@ -69,7 +69,20 @@ npx skills add swiftlysingh/excalidraw-cli
 
 Or copy `skills/excalidraw-cli` into `~/.claude/skills`, `~/.cursor/skills`, or `~/.codex/skills`.
 
-Also available as a [Claude Code plugin](.claude-plugin/plugin.json).
+Gemini CLI:
+
+```bash
+gemini extensions install https://github.com/swiftlysingh/excalidraw-cli
+```
+
+Claude Code plugin:
+
+```
+/plugin marketplace add swiftlysingh/excalidraw-cli
+/plugin install excalidraw-cli@excalidraw-cli
+```
+
+The same marketplace add works from a shell as `claude plugin marketplace add swiftlysingh/excalidraw-cli`.
 
 ## Quick Start
 
