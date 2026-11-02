@@ -58,6 +58,8 @@ describe('package metadata', () => {
   const packageJson = JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8')) as {
     version: string;
     engines?: { node?: string };
+    author?: { name?: string; email?: string; url?: string };
+    keywords?: string[];
   };
 
   it('requires Node 20.19.0 or newer', () => {
@@ -71,6 +73,38 @@ describe('package metadata', () => {
 
     expect(heading?.[1]).toBe(packageJson.version);
     expect(manPage).toContain(`excalidraw-cli ${packageJson.version}`);
+  });
+
+  it('keeps Claude plugin and Gemini extension versions in sync with package.json', () => {
+    const plugin = readJson('.claude-plugin/plugin.json');
+    const gemini = readJson('gemini-extension.json');
+
+    expect(plugin.version).toBe(packageJson.version);
+    expect(gemini.version).toBe(packageJson.version);
+  });
+
+  it('declares npm author metadata and discovery keywords', () => {
+    expect(packageJson.author?.name).toBe('Pushpinder Singh');
+    expect(packageJson.author?.email).toBe('sayhi@swiftlysingh.com');
+    expect(packageJson.author?.url).toBe('https://github.com/swiftlysingh');
+    expect(packageJson.keywords).toEqual(
+      expect.arrayContaining([
+        'excalidraw',
+        'diagram',
+        'cli',
+        'svg',
+        'png',
+        'dot',
+        'graphviz',
+        'text-to-diagram',
+        'diagram-as-code',
+        'agent-skill',
+        'claude-code',
+        'gemini-cli',
+        'codex',
+      ])
+    );
+    expect(packageJson.keywords).not.toContain('mcp-alternative');
   });
 
   it('is not behind any stable git tag', () => {

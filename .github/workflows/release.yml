@@ -77,6 +77,7 @@ jobs:
             npm view "$PACKAGE_NAME" versions --json > "$RUNNER_TEMP/npm-versions.json"
             VERSION=$(node "$GITHUB_WORKSPACE/.github/scripts/release-version.cjs" next)
             npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts
+            node "$GITHUB_WORKSPACE/.github/scripts/sync-manifest-versions.cjs"
             RELEASE_TAG="v$VERSION"
           fi
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
@@ -126,7 +127,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --detach
-          git add package.json package-lock.json
+          git add package.json package-lock.json .claude-plugin/plugin.json gemini-extension.json
           git commit --allow-empty -m "Release $RELEASE_TAG"
           git tag "$RELEASE_TAG"
           git push origin "refs/tags/$RELEASE_TAG"

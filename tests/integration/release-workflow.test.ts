@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -280,10 +280,19 @@ esac
         packages: { '': { name: '@swiftlysingh/excalidraw-cli', version } },
       })
     );
+    mkdirSync(join(directory, '.claude-plugin'), { recursive: true });
+    writeFileSync(
+      join(directory, '.claude-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'excalidraw-cli', version }, null, 2) + '\n'
+    );
+    writeFileSync(
+      join(directory, 'gemini-extension.json'),
+      JSON.stringify({ name: 'excalidraw-cli', version }, null, 2) + '\n'
+    );
     git('init', '-b', 'main');
     git('config', 'user.name', 'Release test');
     git('config', 'user.email', 'release@example.com');
-    git('add', 'package.json', 'package-lock.json');
+    git('add', 'package.json', 'package-lock.json', '.claude-plugin/plugin.json', 'gemini-extension.json');
     git('commit', '-m', 'Initial package');
     git('tag', 'v1.2.0');
     git('tag', 'v99.0.0-beta.1');
@@ -301,6 +310,12 @@ esac
     const lock = JSON.parse(readFileSync(join(directory, 'package-lock.json'), 'utf8'));
     expect(lock.version).toBe('1.3.0');
     expect(lock.packages[''].version).toBe('1.3.0');
+    expect(
+      JSON.parse(readFileSync(join(directory, '.claude-plugin', 'plugin.json'), 'utf8')).version
+    ).toBe('1.3.0');
+    expect(JSON.parse(readFileSync(join(directory, 'gemini-extension.json'), 'utf8')).version).toBe(
+      '1.3.0'
+    );
     const created = runStep('Create release tag', { RELEASE_TAG: 'v1.3.0' });
     expect(created.status, created.stderr).toBe(0);
     expect(git('--git-dir=remote.git', 'rev-parse', 'main')).toBe(main);
@@ -308,6 +323,12 @@ esac
     expect(JSON.parse(git('--git-dir=remote.git', 'show', 'v1.3.0:package.json')).version).toBe(
       '1.3.0'
     );
+    expect(
+      JSON.parse(git('--git-dir=remote.git', 'show', 'v1.3.0:.claude-plugin/plugin.json')).version
+    ).toBe('1.3.0');
+    expect(
+      JSON.parse(git('--git-dir=remote.git', 'show', 'v1.3.0:gemini-extension.json')).version
+    ).toBe('1.3.0');
     const names = steps.map((step) => step.name);
     expect(names.indexOf('Create release tag')).toBeGreaterThan(names.indexOf('Run linter'));
     expect(names.indexOf('Create release tag')).toBeLessThan(names.indexOf('Publish to npm'));
