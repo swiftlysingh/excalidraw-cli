@@ -60,6 +60,7 @@ describe('package metadata', () => {
     engines?: { node?: string };
     author?: { name?: string; email?: string; url?: string };
     keywords?: string[];
+    scripts?: Record<string, string>;
   };
 
   it('requires Node 20.19.0 or newer', () => {
@@ -81,6 +82,11 @@ describe('package metadata', () => {
 
     expect(plugin.version).toBe(packageJson.version);
     expect(gemini.version).toBe(packageJson.version);
+  });
+
+  it('stages plugin and Gemini manifests from the npm version lifecycle', () => {
+    expect(packageJson.scripts?.version).toContain('sync-manifest-versions');
+    expect(packageJson.scripts?.version).toContain('git add .claude-plugin/plugin.json gemini-extension.json');
   });
 
   it('declares npm author metadata and discovery keywords', () => {

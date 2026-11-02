@@ -5,10 +5,18 @@ const path = require('node:path');
 
 const MANIFESTS = ['.claude-plugin/plugin.json', 'gemini-extension.json'];
 
+// SemVer 2.0.0, including prerelease and build metadata: https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+const SEMVER =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+
+function isSemVer(version) {
+  return typeof version === 'string' && SEMVER.test(version);
+}
+
 function syncManifestVersions(root = process.cwd()) {
   const pkgPath = path.join(root, 'package.json');
   const version = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
-  if (typeof version !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
+  if (!isSemVer(version)) {
     throw new Error(`Invalid package.json version: ${version}`);
   }
 
@@ -45,4 +53,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { syncManifestVersions };
+module.exports = { MANIFESTS, isSemVer, syncManifestVersions };
