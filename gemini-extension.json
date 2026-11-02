@@ -1,0 +1,6 @@
+{
+  "name": "excalidraw-cli",
+  "version": "1.5.1",
+  "description": "Create Excalidraw flowcharts and diagrams from DSL, JSON, or Graphviz DOT, then export PNG or SVG.",
+  "contextFileName": "GEMINI.md"
+}

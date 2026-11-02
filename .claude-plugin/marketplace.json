@@ -1,0 +1,15 @@
+{
+  "name": "excalidraw-cli",
+  "description": "Claude Code plugin for creating Excalidraw diagrams from DSL, JSON, or Graphviz DOT.",
+  "owner": {
+    "name": "Pushpinder Singh",
+    "url": "https://github.com/swiftlysingh"
+  },
+  "plugins": [
+    {
+      "name": "excalidraw-cli",
+      "source": "./",
+      "description": "Create Excalidraw flowcharts and diagrams from DSL, JSON, or Graphviz DOT, then export PNG or SVG."
+    }
+  ]
+}
