@@ -39,6 +39,7 @@ describe('npm version lifecycle', () => {
       writeFileSync(join(directory, manifest), '{"name":"excalidraw-cli","version":"1.0.0"}\n');
     }
 
+    /** Fail on Git errors before assertions can inspect an incomplete version commit. */
     function git(...args: string[]) {
       const result = spawnSync('git', args, { cwd: directory, encoding: 'utf8' });
       if (result.status !== 0) throw new Error(result.stderr || result.stdout);

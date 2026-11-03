@@ -10,10 +10,17 @@ const MANIFESTS = ['.claude-plugin/plugin.json', 'gemini-extension.json'];
 const SEMVER =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
+/** Validate npm versions without excluding prereleases or build metadata. */
 function isSemVer(version) {
   return typeof version === 'string' && SEMVER.test(version);
 }
 
+/**
+ * Copy the package version into existing agent manifests without reformatting them.
+ * Missing manifests are optional; invalid package or manifest data stops the sync.
+ * @param {string} root Package directory containing package.json and the manifests.
+ * @returns {{ version: string, updated: string[] }} Version and changed relative paths.
+ */
 function syncManifestVersions(root = process.cwd()) {
   const pkgPath = path.join(root, 'package.json');
   const version = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;

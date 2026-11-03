@@ -41,6 +41,7 @@ describe('syncManifestVersions', () => {
     if (directory) rmSync(directory, { recursive: true, force: true });
   });
 
+  /** Keep fixture writes in a disposable directory so syncing cannot alter the checkout. */
   function setup(files: Record<string, string>) {
     directory = mkdtempSync(join(tmpdir(), 'sync-manifest-versions-'));
     for (const [relative, contents] of Object.entries(files)) {
