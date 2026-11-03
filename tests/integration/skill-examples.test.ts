@@ -11,6 +11,9 @@ const SKILL_DIR = join(PROJECT_ROOT, 'skills', 'excalidraw-cli');
 const SKILL_PATH = join(SKILL_DIR, 'SKILL.md');
 const EXAMPLES_DIR = join(SKILL_DIR, 'examples');
 const PLUGIN_MANIFEST_PATH = join(PROJECT_ROOT, '.claude-plugin', 'plugin.json');
+const MARKETPLACE_PATH = join(PROJECT_ROOT, '.claude-plugin', 'marketplace.json');
+const GEMINI_EXTENSION_PATH = join(PROJECT_ROOT, 'gemini-extension.json');
+const PACKAGE_JSON_PATH = join(PROJECT_ROOT, 'package.json');
 
 function extractFencedBlocks(markdown: string): Array<{ lang: string; body: string }> {
   const blocks: Array<{ lang: string; body: string }> = [];
@@ -44,6 +47,14 @@ describe('agent skill examples', () => {
   const skill = readFileSync(SKILL_PATH, 'utf8');
   const blocks = extractFencedBlocks(skill);
 
+  it('documents Gemini CLI and Claude Code plugin install next to skills add', () => {
+    const readme = readFileSync(join(PROJECT_ROOT, 'README.md'), 'utf8');
+    expect(readme).toContain('npx skills add swiftlysingh/excalidraw-cli');
+    expect(readme).toContain('gemini extensions install https://github.com/swiftlysingh/excalidraw-cli');
+    expect(readme).toContain('/plugin marketplace add swiftlysingh/excalidraw-cli');
+    expect(readme).toContain('/plugin install excalidraw-cli@excalidraw-cli');
+  });
+
   it('keeps Agent Skills frontmatter valid', () => {
     expect(skill.startsWith('---\n')).toBe(true);
     expect(skill).toMatch(/^name: excalidraw-cli$/m);
@@ -56,20 +67,60 @@ describe('agent skill examples', () => {
   it('declares a skills-only Claude Code plugin at the repo root', () => {
     const plugin = JSON.parse(readFileSync(PLUGIN_MANIFEST_PATH, 'utf8')) as {
       name: string;
+      version: string;
       description: string;
       homepage: string;
       repository: string;
       license: string;
       author: { name: string };
     };
+    const pkg = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8')) as { version: string };
 
     expect(plugin.name).toBe('excalidraw-cli');
+    expect(plugin.version).toBe(pkg.version);
     expect(plugin.description.length).toBeGreaterThan(0);
     expect(plugin.author.name).toBe('swiftlysingh');
     expect(plugin.homepage).toBe('https://github.com/swiftlysingh/excalidraw-cli');
     expect(plugin.repository).toBe('https://github.com/swiftlysingh/excalidraw-cli');
     expect(plugin.license).toBe('MIT');
     expect(JSON.stringify(plugin)).not.toContain('swiftlysingh/excalidraw-skill');
+  });
+
+  it('lists the plugin from a Claude Code marketplace at the repo root', () => {
+    const marketplace = JSON.parse(readFileSync(MARKETPLACE_PATH, 'utf8')) as {
+      name: string;
+      description: string;
+      owner: { name: string; url?: string };
+      plugins: Array<{ name: string; source: string; description?: string }>;
+    };
+
+    expect(marketplace.name).toBe('excalidraw-cli');
+    expect(marketplace.description.length).toBeGreaterThan(0);
+    expect(marketplace.owner.name).toBe('Pushpinder Singh');
+    expect(marketplace.owner.url).toBe('https://github.com/swiftlysingh');
+    expect(marketplace.plugins).toHaveLength(1);
+    expect(marketplace.plugins[0]).toMatchObject({
+      name: 'excalidraw-cli',
+      source: './',
+    });
+    expect(marketplace.plugins[0].description?.length).toBeGreaterThan(0);
+    expect(JSON.stringify(marketplace)).not.toContain('swiftlysingh/excalidraw-skill');
+  });
+
+  it('declares a Gemini CLI extension that ships the existing skill', () => {
+    const gemini = JSON.parse(readFileSync(GEMINI_EXTENSION_PATH, 'utf8')) as {
+      name: string;
+      version: string;
+      description: string;
+      contextFileName: string;
+    };
+    const pkg = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8')) as { version: string };
+
+    expect(gemini.name).toBe('excalidraw-cli');
+    expect(gemini.version).toBe(pkg.version);
+    expect(gemini.description.length).toBeGreaterThan(0);
+    expect(gemini.contextFileName).toBe('GEMINI.md');
+    expect(readFileSync(join(PROJECT_ROOT, 'GEMINI.md'), 'utf8')).toContain('excalidraw-cli');
   });
 
   it('runs every bash example against the built CLI', { timeout: 180000 }, () => {

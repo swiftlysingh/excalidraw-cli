@@ -2,6 +2,12 @@
 
 ## 1.5.1 - Unreleased
 
+### Changed
+
+- Add npm package author metadata and discovery keywords.
+- Keep the Claude plugin and Gemini extension versions in sync with package.json, including SemVer prereleases, and stage those manifests during `npm version`.
+- Add a Gemini CLI extension manifest and a Claude Code plugin marketplace file.
+
 ## 1.5.0 - 2026-10-18
 
 ### Changed

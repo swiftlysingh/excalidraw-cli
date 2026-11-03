@@ -18,6 +18,8 @@
     "test:run": "vitest run",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
+    "sync-manifest-versions": "node .github/scripts/sync-manifest-versions.cjs",
+    "version": "npm run sync-manifest-versions -- --stage",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -25,9 +27,24 @@
     "flowchart",
     "diagram",
     "cli",
-    "visualization"
+    "visualization",
+    "svg",
+    "png",
+    "dot",
+    "graphviz",
+    "text-to-diagram",
+    "diagram-as-code",
+    "ai-agent",
+    "agent-skill",
+    "claude-code",
+    "gemini-cli",
+    "codex"
   ],
-  "author": "",
+  "author": {
+    "name": "Pushpinder Singh",
+    "email": "sayhi@swiftlysingh.com",
+    "url": "https://github.com/swiftlysingh"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
