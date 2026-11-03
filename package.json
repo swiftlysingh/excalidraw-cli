@@ -19,7 +19,7 @@
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "sync-manifest-versions": "node .github/scripts/sync-manifest-versions.cjs",
-    "version": "npm run sync-manifest-versions && git add .claude-plugin/plugin.json gemini-extension.json",
+    "version": "npm run sync-manifest-versions -- --stage",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

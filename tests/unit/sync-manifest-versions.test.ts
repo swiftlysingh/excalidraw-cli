@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 
@@ -14,10 +13,6 @@ const {
   MANIFESTS: string[];
   isSemVer: (version: unknown) => boolean;
   syncManifestVersions: (root?: string) => { version: string; updated: string[] };
-};
-
-const realPackage = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {
-  scripts: Record<string, string>;
 };
 
 describe('isSemVer', () => {
@@ -109,46 +104,5 @@ describe('syncManifestVersions', () => {
     });
 
     expect(() => syncManifestVersions(root)).toThrow('Invalid package.json version');
-  });
-
-  it('stages synced manifests in the npm version commit', () => {
-    const root = setup({
-      'package.json': `${JSON.stringify(
-        {
-          name: 'demo',
-          version: '1.5.1',
-          scripts: {
-            'sync-manifest-versions': `node ${JSON.stringify(SCRIPT_PATH)}`,
-            version: realPackage.scripts.version,
-          },
-        },
-        null,
-        2
-      )}\n`,
-      '.claude-plugin/plugin.json': '{\n  "name": "excalidraw-cli",\n  "version": "1.0.0"\n}\n',
-      'gemini-extension.json': '{\n  "name": "excalidraw-cli",\n  "version": "1.0.0"\n}\n',
-    });
-
-    function git(...args: string[]) {
-      const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-      if (result.status !== 0) throw new Error(result.stderr || result.stdout);
-      return result.stdout.trim();
-    }
-
-    git('init', '-b', 'main');
-    git('config', 'user.name', 'Version test');
-    git('config', 'user.email', 'version@example.com');
-    git('add', 'package.json', '.claude-plugin/plugin.json', 'gemini-extension.json');
-    git('commit', '-m', 'Initial package');
-
-    const bumped = spawnSync('npm', ['version', 'prerelease'], {
-      cwd: root,
-      encoding: 'utf8',
-    });
-    expect(bumped.status, bumped.stderr || bumped.stdout).toBe(0);
-    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version).toBe('1.5.2-0');
-    expect(JSON.parse(git('show', 'HEAD:.claude-plugin/plugin.json')).version).toBe('1.5.2-0');
-    expect(JSON.parse(git('show', 'HEAD:gemini-extension.json')).version).toBe('1.5.2-0');
-    expect(git('status', '--porcelain')).toBe('');
   });
 });

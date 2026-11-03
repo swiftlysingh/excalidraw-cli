@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const MANIFESTS = ['.claude-plugin/plugin.json', 'gemini-extension.json'];
 
@@ -46,6 +47,11 @@ function syncManifestVersions(root = process.cwd()) {
 
 if (require.main === module) {
   const { version, updated } = syncManifestVersions();
+  // Match npm's package-root repository check, including worktree .git files.
+  if (process.argv.includes('--stage') && fs.existsSync('.git')) {
+    const manifests = MANIFESTS.filter((file) => fs.existsSync(file));
+    if (manifests.length) execFileSync('git', ['add', '--', ...manifests], { stdio: 'inherit' });
+  }
   process.stdout.write(
     updated.length
       ? `Synced ${updated.join(', ')} to ${version}\n`

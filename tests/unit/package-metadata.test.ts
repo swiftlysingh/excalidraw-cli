@@ -86,7 +86,7 @@ describe('package metadata', () => {
 
   it('stages plugin and Gemini manifests from the npm version lifecycle', () => {
     expect(packageJson.scripts?.version).toContain('sync-manifest-versions');
-    expect(packageJson.scripts?.version).toContain('git add .claude-plugin/plugin.json gemini-extension.json');
+    expect(packageJson.scripts?.version).toContain('--stage');
   });
 
   it('declares npm author metadata and discovery keywords', () => {
