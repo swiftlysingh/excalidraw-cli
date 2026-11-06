@@ -495,9 +495,7 @@ esac
 
   it('passes the resolved previous tag into generated GitHub release notes', () => {
     const release = steps.find((step) => step.name === 'Create GitHub Release');
-    expect(release?.uses).toBe(
-      'softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65'
-    );
+    expect(release?.uses).toBe('softprops/action-gh-release@v2');
     expect(release?.with).toMatchObject({
       generate_release_notes: true,
       previous_tag: '${{ steps.previous_release.outputs.tag }}',
