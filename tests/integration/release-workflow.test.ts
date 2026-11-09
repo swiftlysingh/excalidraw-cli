@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 
 const { load } = createRequire(import.meta.url)('js-yaml');
+const FAKE_TOKEN = 'example-token';
 const workflow = load(readFileSync(resolve('.github/workflows/release.yml'), 'utf8'));
 const steps: {
   name: string;
@@ -43,8 +44,8 @@ function runStep(name: string, env: Record<string, string> = {}) {
       GITHUB_REPOSITORY: 'swiftlysingh/excalidraw-cli',
       TARBALL_URL: `https://registry.npmjs.org/@swiftlysingh/excalidraw-cli/-/excalidraw-cli-${version}.tgz`,
       TARBALL_SHA256: 'a'.repeat(64),
-      NODE_AUTH_TOKEN: 'test-token',
-      HOMEBREW_TAP_GITHUB_TOKEN: 'test-token',
+      NODE_AUTH_TOKEN: FAKE_TOKEN,
+      HOMEBREW_TAP_GITHUB_TOKEN: FAKE_TOKEN,
       NPM_VERSIONS: JSON.stringify(['1.0.0']),
       NPM_VIEW_STATUS: '0',
       NPM_PUBLISH_STATUS: '0',
@@ -142,7 +143,7 @@ describe('release preflight', () => {
   it('accepts configured credentials without printing their values', () => {
     const result = runStep('Check release credentials');
     expect(result.status).toBe(0);
-    expect(result.stdout + result.stderr).not.toContain('test-token');
+    expect(result.stdout + result.stderr).not.toContain(FAKE_TOKEN);
   });
 });
 
